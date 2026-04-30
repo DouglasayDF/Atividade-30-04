@@ -38,26 +38,34 @@ Mapper Pattern
 Exception Handler global
 
 Funcionalidades
+
 Corretoras
+
 Criar corretora via CNPJ + CEP
+
 Validação automática de dados externos
+
 Listar / buscar / deletar
+
 Ações
+
 Cadastro de ações vinculadas à corretora
+
 Cotação automática por mercado (BR ou US)
+
 Atualização de preço em tempo real
 
 Principais endpoints
 
 Corretoras
 
-#POST   /corretoras
+POST   /corretoras
 
-#GET    /corretoras
+GET    /corretoras
 
-#GET    /corretoras/{id}
+GET    /corretoras/{id}
 
-#DELETE /corretoras/{id}
+DELETE /corretoras/{id}
 
 
 Ações
@@ -71,8 +79,13 @@ GET    /acoes/{id}
 DELETE /acoes/{id}
 
 Arquitetura
+
 Camada Controller
+
 Camada Service
+
 Camada Repository
+
 Integração externa via WebClient
+
 Strategy para cotação por mercado
