@@ -47,12 +47,6 @@ Cadastro de ações vinculadas à corretora
 Cotação automática por mercado (BR ou US)
 Atualização de preço em tempo real
 
-# clonar o projeto
-git clone <repo>
-
-
-# rodar
-./mvnw spring-boot:run
 Principais endpoints
 
 Corretoras
