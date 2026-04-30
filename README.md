@@ -6,15 +6,21 @@ Sistema de Corretoras e Ações
 Este projeto é uma API REST desenvolvida em Java com Spring Boot, que gerencia corretoras e ações, integrando dados de mercado em tempo real através de APIs externas.
 
 Tecnologias utilizadas
-Java 17
-Spring Boot
-Spring WebFlux (WebClient)
-Spring Data JPA
-Hibernate
-H2 / MySQL (opcional)
-Lombok (opcional)
 
- APIs externas utilizadas:
+- Java 17
+
+- Spring Boot
+
+- Spring WebFlux (WebClient)
+
+- Spring Data JPA
+
+- Hibernate
+
+- H2 / MySQL 
+
+
+ --- APIs externas utilizadas:
 - Alpha Vantage
 Endpoint: cotação de ações internacionais (EUA)
 Uso: buscar preço de ações em USD
@@ -29,7 +35,7 @@ Uso: validação e enriquecimento de dados de corretoras
 - ViaCEP
 Uso: preenchimento automático de endereço por CEP
 
-Padrões de projeto utilizados
+--- Padrões de projeto utilizados
 
 - Strategy Pattern (cotação BR / US)
 - Factory Pattern (CotacaoFactory)
@@ -37,9 +43,9 @@ Padrões de projeto utilizados
 - Mapper Pattern
 - Exception Handler global
 
-Funcionalidades
+--- Funcionalidades
 
-Corretoras
+  Corretoras
 
 - Criar corretora via CNPJ + CEP
 
@@ -47,7 +53,7 @@ Corretoras
 
 - Listar / buscar / deletar
 
-Ações
+  Ações
 
 - Cadastro de ações vinculadas à corretora
 
@@ -56,6 +62,8 @@ Ações
 - Atualização de preço em tempo real
 
 - Principais endpoints
+
+--- Postman
 
 Corretoras
 
@@ -78,7 +86,7 @@ GET    /acoes/{id}
 
 DELETE /acoes/{id}
 
-Arquitetura
+--- Arquitetura
 
 - Camada Controller
 
