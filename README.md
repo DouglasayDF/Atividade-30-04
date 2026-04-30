@@ -50,16 +50,16 @@ Atualização de preço em tempo real
 Principais endpoints
 
 Corretoras
-POST   /corretoras
-GET    /corretoras
-GET    /corretoras/{id}
-DELETE /corretoras/{id}
+#POST   /corretoras
+#GET    /corretoras
+#GET    /corretoras/{id}
+#DELETE /corretoras/{id}
 
 Ações
-POST   /acoes
-GET    /acoes
-GET    /acoes/{id}
-DELETE /acoes/{id}
+#POST   /acoes
+#GET    /acoes
+#GET    /acoes/{id}
+#DELETE /acoes/{id}
 
 Arquitetura
 Camada Controller
