@@ -14,7 +14,7 @@ Hibernate
 H2 / MySQL (opcional)
 Lombok (opcional)
 
- APIs externas utilizadas
+ APIs externas utilizadas:
 - Alpha Vantage
 Endpoint: cotação de ações internacionais (EUA)
 Uso: buscar preço de ações em USD
@@ -31,31 +31,31 @@ Uso: preenchimento automático de endereço por CEP
 
 Padrões de projeto utilizados
 
-Strategy Pattern (cotação BR / US)
-Factory Pattern (CotacaoFactory)
-DTO Pattern
-Mapper Pattern
-Exception Handler global
+- Strategy Pattern (cotação BR / US)
+- Factory Pattern (CotacaoFactory)
+- DTO Pattern
+- Mapper Pattern
+- Exception Handler global
 
 Funcionalidades
 
 Corretoras
 
-Criar corretora via CNPJ + CEP
+- Criar corretora via CNPJ + CEP
 
-Validação automática de dados externos
+- Validação automática de dados externos
 
-Listar / buscar / deletar
+- Listar / buscar / deletar
 
 Ações
 
-Cadastro de ações vinculadas à corretora
+- Cadastro de ações vinculadas à corretora
 
-Cotação automática por mercado (BR ou US)
+- Cotação automática por mercado (BR ou US)
 
-Atualização de preço em tempo real
+- Atualização de preço em tempo real
 
-Principais endpoints
+- Principais endpoints
 
 Corretoras
 
@@ -80,12 +80,12 @@ DELETE /acoes/{id}
 
 Arquitetura
 
-Camada Controller
+- Camada Controller
 
-Camada Service
+- Camada Service
 
-Camada Repository
+- Camada Repository
 
-Integração externa via WebClient
+- Integração externa via WebClient
 
-Strategy para cotação por mercado
+- Strategy para cotação por mercado
