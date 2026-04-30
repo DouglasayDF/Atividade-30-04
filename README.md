@@ -67,24 +67,24 @@ Uso: preenchimento automático de endereço por CEP
 
 Corretoras
 
-POST   /corretoras
+   POST   /corretoras
 
-GET    /corretoras
+   GET    /corretoras
 
-GET    /corretoras/{id}
+   GET    /corretoras/{id}
 
-DELETE /corretoras/{id}
+   DELETE /corretoras/{id}
 
 
 Ações
 
-POST   /acoes
+  POST   /acoes
 
-GET    /acoes
+  GET    /acoes
 
-GET    /acoes/{id}
+  GET    /acoes/{id}
 
-DELETE /acoes/{id}
+  DELETE /acoes/{id}
 
 --- Arquitetura
 
