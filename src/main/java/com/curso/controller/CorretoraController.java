@@ -2,8 +2,11 @@ package com.curso.controller;
 
 import com.curso.dto.CorretoraInputDto;
 import com.curso.dto.CorretoraOutputDto;
+import com.curso.dto.CorretoraPadraoDto;
+import com.curso.dto.ValidacaoCorretoraDto;
 import com.curso.mapper.CorretoraMapper;
 import com.curso.service.CorretoraService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,7 +26,7 @@ public class CorretoraController {
     }
 
     @PostMapping
-    public CorretoraOutputDto criar(@RequestBody CorretoraInputDto dto) {
+    public CorretoraOutputDto criar(@RequestBody @Valid CorretoraInputDto dto) {
         return mapper.toDTO(service.cadastrar(dto));
     }
 
@@ -43,6 +46,24 @@ public class CorretoraController {
     @GetMapping("/cnpj/{cnpj}")
     public CorretoraOutputDto buscarPorCnpj(@PathVariable String cnpj) {
         return mapper.toDTO(service.buscarPorCnpj(cnpj));
+    }
+
+    @GetMapping("/{id}/validacao")
+    public ValidacaoCorretoraDto validar(@PathVariable Long id) {
+        return service.validar(id);
+    }
+
+    @GetMapping("/padrao")
+    public List<CorretoraPadraoDto> listarPadrao() {
+        return service.listarPadrao();
+    }
+
+    @PostMapping("/padrao")
+    public List<CorretoraOutputDto> cadastrarPadrao() {
+        return service.cadastrarPadrao()
+                .stream()
+                .map(mapper::toDTO)
+                .toList();
     }
 
     @DeleteMapping("/{id}")

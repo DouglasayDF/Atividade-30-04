@@ -10,8 +10,10 @@ public class CorretoraInputDto {
     private String cnpj;
 
     @NotBlank
+    @Pattern(regexp = "\\d{8}")
     private String cep;
 
+    @NotBlank
     private String numero;
     private String complemento;
 

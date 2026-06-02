@@ -1,4 +1,4 @@
-package com.curso.entity;
+package com.curso.strategy;
 
 import com.curso.cliente.BrapiCliente;
 import com.curso.dto.CotacaoOutputDto;

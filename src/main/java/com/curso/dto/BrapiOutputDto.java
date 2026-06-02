@@ -1,9 +1,11 @@
 package com.curso.dto;
 
+import java.math.BigDecimal;
+
 public class BrapiOutputDto {
     private String symbol;
     private String shortName;
-    private Double regularMarketPrice;
+    private BigDecimal regularMarketPrice;
     private String currency;
 
     public String getSymbol() {
@@ -22,11 +24,11 @@ public class BrapiOutputDto {
         this.shortName = shortName;
     }
 
-    public Double getRegularMarketPrice() {
+    public BigDecimal getRegularMarketPrice() {
         return regularMarketPrice;
     }
 
-    public void setRegularMarketPrice(Double regularMarketPrice) {
+    public void setRegularMarketPrice(BigDecimal regularMarketPrice) {
         this.regularMarketPrice = regularMarketPrice;
     }
 

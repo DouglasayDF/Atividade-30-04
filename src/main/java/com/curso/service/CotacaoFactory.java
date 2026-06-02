@@ -1,7 +1,7 @@
 package com.curso.service;
 
 import com.curso.dto.CotacaoOutputDto;
-import com.curso.entity.CotacaoStrategy;
+import com.curso.strategy.CotacaoStrategy;
 import com.curso.enums.Mercado;
 import org.springframework.stereotype.Service;
 

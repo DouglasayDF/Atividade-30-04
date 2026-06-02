@@ -1,12 +1,13 @@
 package com.curso.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class CotacaoOutputDto {
     private String ticker;
     private String nomeEmpresa;
     private String moeda;
-    private Double cotacao;
+    private BigDecimal cotacao;
     private LocalDateTime dataHora;
 
 
@@ -34,11 +35,11 @@ public class CotacaoOutputDto {
         this.moeda = moeda;
     }
 
-    public Double getCotacao() {
+    public BigDecimal getCotacao() {
         return cotacao;
     }
 
-    public void setCotacao(Double cotacao) {
+    public void setCotacao(BigDecimal cotacao) {
         this.cotacao = cotacao;
     }
 

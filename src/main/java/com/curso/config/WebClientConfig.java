@@ -16,4 +16,18 @@ public class WebClientConfig {
     public WebClient webClient(WebClient.Builder builder) {
         return builder.build();
     }
+
+    @Bean
+    public WebClient alphaWebClient(WebClient.Builder builder) {
+        return builder
+                .baseUrl("https://www.alphavantage.co")
+                .build();
+    }
+
+    @Bean
+    public WebClient brapiWebClient(WebClient.Builder builder) {
+        return builder
+                .baseUrl("https://brapi.dev")
+                .build();
+    }
 }

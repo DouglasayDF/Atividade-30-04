@@ -1,20 +1,24 @@
 package com.curso.service;
 
 import com.curso.domains.Acao;
+import com.curso.domains.Compra;
 import com.curso.domains.Corretora;
 import com.curso.dto.AcaoInputDto;
+import com.curso.dto.CompraInputDto;
 import com.curso.enums.Moeda;
+import com.curso.exception.AcaoNaoEncontradaException;
+import com.curso.exception.MoedaInvalidaException;
 import com.curso.repository.CorretoraRepository;
 import com.curso.dto.CotacaoOutputDto;
 import com.curso.exception.TickerInvalidoException;
 import com.curso.repository.AcaoRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
-
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Transactional
 @Service
 public class AcaoService {
 
@@ -30,13 +34,17 @@ public class AcaoService {
         this.cotacaoFactory = cotacaoFactory;
     }
 
+
+
     public List<Acao> listar() {
         return repository.findAll();
     }
 
     public Acao cadastrar(AcaoInputDto dto) {
 
-        if (repository.existsByTicker(dto.getTicker())) {
+        String tickerNormalizado = dto.getTicker().toUpperCase();
+
+        if (repository.existsByTicker(tickerNormalizado)) {
             throw new TickerInvalidoException("Ticker já cadastrado");
         }
 
@@ -45,17 +53,22 @@ public class AcaoService {
 
         CotacaoOutputDto cotacao = cotacaoFactory.executar(
                 dto.getMercado(),
-                dto.getTicker()
+               // dto.getTicker()
+                tickerNormalizado
         );
 
         Acao a = new Acao();
 
-        a.setTicker(dto.getTicker());
+       // a.setTicker(dto.getTicker());
+        a.setTicker(tickerNormalizado);
         a.setMercado(dto.getMercado());
 
-        a.setMoeda(Moeda.valueOf(cotacao.getMoeda()));
-
-        a.setCotacaoAtual(BigDecimal.valueOf(cotacao.getCotacao()));
+        try {
+            a.setMoeda(Moeda.valueOf(cotacao.getMoeda()));
+        } catch (Exception e) {
+            throw new MoedaInvalidaException("Moeda inválida da API");
+        }
+        a.setCotacaoAtual(cotacao.getCotacao());
         a.setNomeEmpresa(cotacao.getNomeEmpresa());
         a.setDataHoraCotacao(LocalDateTime.now());
         a.setCorretora(corretora);
@@ -73,28 +86,30 @@ public class AcaoService {
                 acao.getTicker()
         );
 
-        acao.setCotacaoAtual(BigDecimal.valueOf(cotacao.getCotacao()));
+        acao.setCotacaoAtual(cotacao.getCotacao());
         acao.setDataHoraCotacao(LocalDateTime.now());
         acao.setNomeEmpresa(cotacao.getNomeEmpresa());
 
         return repository.save(acao);
 
-
     }
+
 
     public Acao buscarPorId(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ação não encontrada"));
+                .orElseThrow(() ->
+                        new AcaoNaoEncontradaException("Ação não encontrada"));
     }
 
     public Acao buscarPorTicker(String ticker) {
 
-        return repository.findByTicker(ticker)
+        return repository.findByTicker(ticker.toUpperCase())
                 .orElseThrow(() ->
-                        new TickerInvalidoException("Ticker não encontrado"));
+                        new AcaoNaoEncontradaException("Ação não encontrada"));
     }
 
     public void deletar(Long id) {
-        Acao acao = repository.findById(id) .orElseThrow(() -> new RuntimeException("Ação não encontrada"));
+        Acao acao = repository.findById(id) .orElseThrow(() ->
+                new AcaoNaoEncontradaException("Ação não encontrada"));
         repository.delete(acao); }
 }

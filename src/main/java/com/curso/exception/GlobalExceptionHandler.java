@@ -30,4 +30,26 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest()
                 .body(new ErrorResponse("Erro interno: " + ex.getMessage()));
     }
+    @ExceptionHandler(CorretoraNaoEncontradaException.class)
+    public ResponseEntity<ErrorResponse> handleCorretoraNaoEncontrada(
+            CorretoraNaoEncontradaException ex) {
+
+        return ResponseEntity.status(404)
+                .body(new ErrorResponse(ex.getMessage()));
+    }
+    @ExceptionHandler(AcaoNaoEncontradaException.class)
+    public ResponseEntity<ErrorResponse> handleAcaoNaoEncontrada(
+            AcaoNaoEncontradaException ex) {
+
+        return ResponseEntity.status(404)
+                .body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(MoedaInvalidaException.class)
+    public ResponseEntity<ErrorResponse> handleMoeda(
+            MoedaInvalidaException ex) {
+
+        return ResponseEntity.status(404)
+                .body(new ErrorResponse(ex.getMessage()));
+    }
 }

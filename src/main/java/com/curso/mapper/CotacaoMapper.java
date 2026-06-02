@@ -4,6 +4,7 @@ import com.curso.dto.AlphaOutputDto;
 import com.curso.dto.CotacaoOutputDto;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Component
@@ -16,7 +17,7 @@ public class CotacaoMapper {
         CotacaoOutputDto dto = new CotacaoOutputDto();
         dto.setTicker(q.getSimbolo());
         dto.setMoeda("USD");
-        dto.setCotacao(Double.parseDouble(q.getPreco()));
+        dto.setCotacao(new BigDecimal(q.getPreco()));
         dto.setDataHora(LocalDateTime.now());
 
         return dto;

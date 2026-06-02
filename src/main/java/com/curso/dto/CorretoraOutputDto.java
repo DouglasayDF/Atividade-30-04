@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 
 public class CorretoraOutputDto {
 
-    @NotNull
+
     private Long id;
     private String cnpj;
     private String nomeFantasia;

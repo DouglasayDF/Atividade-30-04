@@ -1,9 +1,12 @@
 package com.curso.cliente;
 
 import com.curso.dto.CepOutputDto;
+import com.curso.exception.CepInvalidoException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+
+import java.time.Duration;
 
 
 @Component
@@ -25,16 +28,24 @@ public class ViaCepCliente {
                     .onStatus(status -> status.is5xxServerError(),
                             resp -> Mono.error(new RuntimeException("API ViaCEP fora do ar")))
                     .bodyToMono(CepOutputDto.class)
+                    .timeout(Duration.ofSeconds(10))
                     .block();
 
-            if (response == null || response.getLogradouro() == null) {
-                throw new RuntimeException("CEP não encontrado");
+            if (response == null) {
+                throw new CepInvalidoException(
+                        "CEP não encontrado"
+                );
             }
 
+            if (Boolean.TRUE.equals(response.getErro())) {
+                throw new CepInvalidoException(
+                        "CEP inválido"
+                );
+            }
             return response;
 
         } catch (Exception e) {
-            throw new RuntimeException("Erro ao consultar CEP: " + e.getMessage());
+            throw new CepInvalidoException("Erro ao consultar CEP: " + e.getMessage());
         }
     }
 }

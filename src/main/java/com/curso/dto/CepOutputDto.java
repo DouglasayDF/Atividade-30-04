@@ -1,10 +1,21 @@
 package com.curso.dto;
 
 public class CepOutputDto {
+
     private String logradouro;
     private String bairro;
     private String localidade;
     private String uf;
+
+    private Boolean erro;
+
+    public Boolean getErro() {
+        return erro;
+    }
+
+    public void setErro(Boolean erro) {
+        this.erro = erro;
+    }
 
     public String getLogradouro() {
         return logradouro;
@@ -37,6 +48,4 @@ public class CepOutputDto {
     public void setUf(String uf) {
         this.uf = uf;
     }
-
-
 }

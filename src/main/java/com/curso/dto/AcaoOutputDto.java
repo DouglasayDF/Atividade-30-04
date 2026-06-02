@@ -2,20 +2,23 @@ package com.curso.dto;
 
 import com.curso.enums.Mercado;
 import com.curso.enums.Moeda;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class AcaoOutputDto {
-    @NotNull
     private Long id;
-
     private String ticker;
     private String nomeEmpresa;
     private Mercado mercado;
     private Moeda moeda;
     private BigDecimal cotacaoAtual;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonFormat(pattern = "dd-MM-yyyy HH:mm:ss")
     private LocalDateTime dataHoraCotacao;
 
     public Long getId() {
