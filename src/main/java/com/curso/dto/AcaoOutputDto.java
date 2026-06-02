@@ -4,8 +4,6 @@ import com.curso.enums.Mercado;
 import com.curso.enums.Moeda;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import jakarta.validation.constraints.NotNull;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 

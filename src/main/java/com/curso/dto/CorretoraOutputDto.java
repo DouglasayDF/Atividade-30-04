@@ -1,6 +1,5 @@
 package com.curso.dto;
 
-import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
 

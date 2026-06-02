@@ -1,10 +1,8 @@
 package com.curso.service;
 
 import com.curso.domains.Acao;
-import com.curso.domains.Compra;
 import com.curso.domains.Corretora;
 import com.curso.dto.AcaoInputDto;
-import com.curso.dto.CompraInputDto;
 import com.curso.enums.Moeda;
 import com.curso.exception.AcaoNaoEncontradaException;
 import com.curso.exception.MoedaInvalidaException;
