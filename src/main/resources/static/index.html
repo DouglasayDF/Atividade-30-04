@@ -12,9 +12,12 @@
         <p class="eyebrow">API Spring Boot</p>
         <h1>Gestão de corretoras, ações e carteira</h1>
     </div>
-    <div class="status-strip" aria-live="polite">
-        <span id="apiStatus" class="status-dot"></span>
-        <span id="statusText">Pronto para consultar</span>
+    <div class="header-controls">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">Modo noturno</button>
+        <div class="status-strip" aria-live="polite">
+            <span id="apiStatus" class="status-dot"></span>
+            <span id="statusText">Pronto para consultar</span>
+        </div>
     </div>
 </header>
 
@@ -89,6 +92,7 @@
                     <th>Situação</th>
                     <th>CVM</th>
                     <th>Validação</th>
+                    <th>Ações</th>
                 </tr>
                 </thead>
                 <tbody id="corretorasBody"></tbody>
@@ -123,10 +127,7 @@
                         <option value="US">Estados Unidos</option>
                     </select>
                 </label>
-                <label>
-                    ID da corretora
-                    <input name="corretoraId" inputmode="numeric" placeholder="1" required>
-                </label>
+
                 <button class="primary-action" type="submit">Cadastrar ação</button>
             </form>
 
@@ -159,6 +160,7 @@
                     <th>Moeda</th>
                     <th>Cotação</th>
                     <th>Atualização</th>
+                    <th>Ações</th>
                 </tr>
                 </thead>
                 <tbody id="acoesBody"></tbody>
@@ -268,6 +270,35 @@
             Selecione um usuário e registre operações para ver o custo médio.
         </div>
 
+        <div class="calculator-panel">
+            <h3>Calculadora</h3>
+            <div class="calculator-controls">
+                <label>
+                    Ação
+                    <select id="calculadoraAcao"></select>
+                </label>
+                <label>
+                    Operação
+                    <select id="calculadoraTipo">
+                        <option value="COMPRA">Compra</option>
+                        <option value="VENDA">Venda</option>
+                    </select>
+                </label>
+                <label>
+                    Quantidade
+                    <input id="calculadoraQuantidade" inputmode="numeric" min="1" step="1" type="number" placeholder="100">
+                </label>
+                <label>
+                    Preço unitário
+                    <input id="calculadoraPreco" inputmode="decimal" min="0.01" step="0.01" type="number" placeholder="32.50">
+                </label>
+            </div>
+            <button id="usarCotacaoCalculadora" type="button" class="secondary-action">Usar cotação atual</button>
+            <div id="calculadoraCarteiraResultado" class="calculator-result compact-result">
+                Selecione uma ação e informe os valores.
+            </div>
+        </div>
+
         <div class="average-panel">
             <h3>Média entre duas ações</h3>
             <div class="average-controls">
@@ -284,7 +315,42 @@
                 Selecione duas ações diferentes da carteira.
             </div>
         </div>
-
+        <div class="two-stock-calculator-panel">
+            <h3>Calculadora entre duas ações</h3>
+            <div class="two-stock-calculator-grid">
+                <label>
+                    Primeira ação
+                    <select id="calcDuasAcoesA"></select>
+                </label>
+                <label>
+                    Segunda ação
+                    <select id="calcDuasAcoesB"></select>
+                </label>
+                <label>
+                    Quantidade da primeira
+                    <input id="calcDuasAcoesQuantidadeA" inputmode="numeric" min="0" step="1" type="number" placeholder="10">
+                </label>
+                <label>
+                    Quantidade da segunda
+                    <input id="calcDuasAcoesQuantidadeB" inputmode="numeric" min="0" step="1" type="number" placeholder="10">
+                </label>
+                <label>
+                    Preço da primeira
+                    <input id="calcDuasAcoesPrecoA" inputmode="decimal" min="0.01" step="0.01" type="number" placeholder="Usar valor atual">
+                </label>
+                <label>
+                    Preço da segunda
+                    <input id="calcDuasAcoesPrecoB" inputmode="decimal" min="0.01" step="0.01" type="number" placeholder="Usar valor atual">
+                </label>
+            </div>
+            <div class="button-row calculator-actions">
+                <button id="usarValoresAtuaisDuasAcoes" type="button" class="secondary-action">Usar valores atuais</button>
+                <button id="limparCalculadoraDuasAcoes" type="button" class="secondary-action">Limpar valores</button>
+            </div>
+            <div id="calculadoraDuasAcoesResultado" class="calculator-result compact-result">
+                Selecione duas ações para comparar.
+            </div>
+        </div>
         <h3 class="table-title">Compras do usuário</h3>
         <div class="table-shell purchases-table">
             <table>

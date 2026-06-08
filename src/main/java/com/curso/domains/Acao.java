@@ -17,8 +17,8 @@ public class Acao {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "corretora_id", nullable = false)
+    @ManyToOne
+    @JoinColumn(name = "corretora_id")
     private Corretora corretora;
 
     @Column(nullable = false)

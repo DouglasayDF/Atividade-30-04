@@ -3,6 +3,7 @@ package com.curso.controller;
 import com.curso.domains.Acao;
 import com.curso.dto.AcaoInputDto;
 import com.curso.dto.AcaoOutputDto;
+import com.curso.dto.BrapiListResponseDto;
 import com.curso.mapper.AcaoMapper;
 import com.curso.service.AcaoService;
 import jakarta.validation.Valid;
@@ -34,6 +35,30 @@ public class AcaoController {
                 .stream()
                 .map(mapper::toDTO)
                 .toList();
+    }
+
+    @GetMapping("/brapi/list")
+    public BrapiListResponseDto listarAcoesBrapi(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) String sector,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String subType,
+            @RequestParam(required = false) String token) {
+        return service.listarAcoesBrapi(
+                search,
+                sortBy,
+                sortOrder,
+                limit,
+                page,
+                sector,
+                type,
+                subType,
+                token
+        );
     }
 
     @GetMapping("/{id}")

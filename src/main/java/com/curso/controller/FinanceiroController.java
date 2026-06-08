@@ -2,6 +2,7 @@ package com.curso.controller;
 
 import com.curso.dto.DepositoDto;
 import com.curso.service.FinanceiroService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -21,7 +22,7 @@ public class FinanceiroController {
     @PostMapping("/deposito/{usuarioId}")
     public void depositar(
             @PathVariable Long usuarioId,
-            @RequestBody DepositoDto dto) {
+            @RequestBody @Valid DepositoDto dto) {
 
         service.depositar(usuarioId, dto);
     }

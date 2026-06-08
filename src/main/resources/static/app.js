@@ -1,3 +1,13 @@
+const THEME_STORAGE_KEY = "gestaoInvestimentosTheme";
+
+function getInitialTheme() {
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    if (savedTheme === "dark" || savedTheme === "light") return savedTheme;
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+document.body.dataset.theme = getInitialTheme();
+
 const state = {
     corretoras: [],
     validacoesCorretoras: {},
@@ -41,9 +51,25 @@ const elements = {
     tipoOperacaoLabel: $("#tipoOperacaoLabel"),
     novaCompraOperacao: $("#novaCompraOperacao"),
     usuarioSelect: $("#usuarioSelect"),
+    themeToggle: $("#themeToggle"),
+    calculadoraAcao: $("#calculadoraAcao"),
+    calculadoraTipo: $("#calculadoraTipo"),
+    calculadoraQuantidade: $("#calculadoraQuantidade"),
+    calculadoraPreco: $("#calculadoraPreco"),
+    calculadoraResultado: $("#calculadoraCarteiraResultado"),
+    usarCotacaoCalculadora: $("#usarCotacaoCalculadora"),
     mediaAcaoA: $("#mediaAcaoA"),
     mediaAcaoB: $("#mediaAcaoB"),
     mediaDuasAcoesResultado: $("#mediaDuasAcoesResultado"),
+    calcDuasAcoesA: $("#calcDuasAcoesA"),
+    calcDuasAcoesB: $("#calcDuasAcoesB"),
+    calcDuasAcoesQuantidadeA: $("#calcDuasAcoesQuantidadeA"),
+    calcDuasAcoesQuantidadeB: $("#calcDuasAcoesQuantidadeB"),
+    calcDuasAcoesPrecoA: $("#calcDuasAcoesPrecoA"),
+    calcDuasAcoesPrecoB: $("#calcDuasAcoesPrecoB"),
+    usarValoresAtuaisDuasAcoes: $("#usarValoresAtuaisDuasAcoes"),
+    limparCalculadoraDuasAcoes: $("#limparCalculadoraDuasAcoes"),
+    calculadoraDuasAcoesResultado: $("#calculadoraDuasAcoesResultado"),
     operacaoResumo: $("#operacaoResumo")
 };
 
@@ -61,6 +87,21 @@ function showToast(message, type = "success") {
     showToast.timer = window.setTimeout(() => {
         elements.toast.className = "toast";
     }, 4200);
+}
+
+function applyTheme(theme) {
+    const normalized = theme === "dark" ? "dark" : "light";
+    document.body.dataset.theme = normalized;
+    localStorage.setItem(THEME_STORAGE_KEY, normalized);
+
+    if (elements.themeToggle) {
+        elements.themeToggle.textContent = normalized === "dark" ? "Modo claro" : "Modo noturno";
+        elements.themeToggle.setAttribute("aria-pressed", String(normalized === "dark"));
+    }
+}
+
+function toggleTheme() {
+    applyTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
 }
 
 async function requestJson(url, options = {}) {
@@ -101,6 +142,10 @@ async function requestJson(url, options = {}) {
 
 function getFormData(form) {
     return Object.fromEntries(new FormData(form).entries());
+}
+
+function onlyDigits(value) {
+    return String(value || "").replace(/\D/g, "");
 }
 
 function setTipoOperacao(tipo) {
@@ -177,8 +222,23 @@ function selectedUsuarioId() {
     return elements.usuarioSelect.value || state.usuarioId;
 }
 
-function pareceTickerAmericano(ticker) {
-    return /^[A-Z]{1,5}$/.test(ticker);
+function inferirMercadoPorTicker(ticker, fallback = "BR") {
+    const tickerNormalizado = String(ticker || "").trim().toUpperCase();
+    if (!tickerNormalizado) return fallback;
+
+    if (/^[A-Z]{4}\d{1,2}[A-Z]?$/.test(tickerNormalizado) || /^[A-Z0-9]+\.SA$/.test(tickerNormalizado)) {
+        return "BR";
+    }
+
+    if (/^[A-Z]{1,5}([.-][A-Z])?$/.test(tickerNormalizado)) {
+        return "US";
+    }
+
+    return fallback;
+}
+
+function mercadoLabel(mercado) {
+    return mercado === "US" ? "Estados Unidos" : "Brasil";
 }
 
 function isTickerDuplicadoMessage(message) {
@@ -264,14 +324,16 @@ function renderOperacaoResumo() {
 
 function sugerirMercadoDaAcao() {
     const ticker = elements.acaoForm.elements.ticker.value.trim().toUpperCase();
-    if (ticker && pareceTickerAmericano(ticker)) {
-        elements.acaoForm.elements.mercado.value = "US";
+    const mercado = inferirMercadoPorTicker(ticker, elements.acaoForm.elements.mercado.value);
+
+    if (ticker && elements.acaoForm.elements.mercado.value !== mercado) {
+        elements.acaoForm.elements.mercado.value = mercado;
     }
 }
 
 function renderCorretoras(items) {
     if (!items.length) {
-        elements.corretorasBody.innerHTML = `<tr><td class="empty-state" colspan="7">Nenhuma corretora encontrada.</td></tr>`;
+        elements.corretorasBody.innerHTML = `<tr><td class="empty-state" colspan="8">Nenhuma corretora encontrada.</td></tr>`;
         return;
     }
 
@@ -291,6 +353,11 @@ function renderCorretoras(items) {
             <td>${item.situacaoCadastral || "-"}</td>
             <td><span class="badge ${item.validadaNaCvm ? "ok" : "warn"}">${item.validadaNaCvm ? "Validada" : "Não validada"}</span></td>
             <td>${motivo}</td>
+            <td>${item.id && item.id !== "-" ? `
+                <button class="table-action danger-action" type="button" data-delete-corretora="${item.id}">
+                    Excluir
+                </button>
+            ` : "-"}</td>
         </tr>
             `;
         })()}
@@ -301,7 +368,7 @@ function renderAcoes(items) {
     renderAcaoOptions();
 
     if (!items.length) {
-        elements.acoesBody.innerHTML = `<tr><td class="empty-state" colspan="7">Nenhuma ação encontrada.</td></tr>`;
+        elements.acoesBody.innerHTML = `<tr><td class="empty-state" colspan="8">Nenhuma ação encontrada.</td></tr>`;
         return;
     }
 
@@ -314,12 +381,19 @@ function renderAcoes(items) {
             <td>${item.moeda || "-"}</td>
             <td>${formatMoney(item.cotacaoAtual, item.moeda || "BRL")}</td>
             <td>${formatDate(item.dataHoraCotacao)}</td>
+            <td>${item.id && item.id !== "-" ? `
+                <button class="table-action danger-action" type="button" data-delete-acao="${item.id}">
+                    Excluir
+                </button>
+            ` : "-"}</td>
         </tr>
     `).join("");
 }
 
 function renderAcaoOptions() {
     const select = elements.operacaoForm?.elements.acaoId;
+    renderCalculadoraOptions();
+    renderCalculadoraDuasAcoesOptions();
     if (!select) return;
 
     select.innerHTML = state.acoes.length
@@ -327,6 +401,117 @@ function renderAcaoOptions() {
             <option value="${acao.id}">${acao.ticker} - ${acao.nomeEmpresa || "Ação"} (#${acao.id})</option>
         `).join("")
         : `<option value="">Cadastre uma ação primeiro</option>`;
+}
+
+function renderCalculadoraOptions() {
+    const select = elements.calculadoraAcao;
+    if (!select) return;
+
+    const selected = select.value;
+    const acoesOrdenadas = [...state.acoes].sort((a, b) => a.ticker.localeCompare(b.ticker));
+
+    if (!acoesOrdenadas.length) {
+        select.innerHTML = `<option value="">Cadastre uma ação</option>`;
+        renderCalculadoraCarteira();
+        return;
+    }
+
+    select.innerHTML = acoesOrdenadas.map((acao) => `
+        <option value="${acao.ticker}">${acao.ticker} - ${acao.nomeEmpresa || "Ação"}</option>
+    `).join("");
+
+    select.value = acoesOrdenadas.some((acao) => acao.ticker === selected)
+        ? selected
+        : acoesOrdenadas[0].ticker;
+
+    renderCalculadoraCarteira();
+}
+
+function usarCotacaoAtualNaCalculadora() {
+    const acao = getAcaoByTicker(elements.calculadoraAcao?.value);
+    if (!acao) return;
+
+    elements.calculadoraPreco.value = Number(acao.cotacaoAtual || 0).toFixed(2);
+    renderCalculadoraCarteira();
+}
+
+function renderCalculadoraCarteira() {
+    const result = elements.calculadoraResultado;
+    if (!result) return;
+
+    const acao = getAcaoByTicker(elements.calculadoraAcao?.value);
+    if (!acao) {
+        result.textContent = "Cadastre uma ação para usar a calculadora.";
+        return;
+    }
+
+    const tipo = elements.calculadoraTipo.value;
+    const quantidade = parseNumber(elements.calculadoraQuantidade.value || 0);
+    const precoUnitario = parseNumber(elements.calculadoraPreco.value || 0);
+    const posicao = getPosicaoByTicker(acao.ticker);
+    const moeda = acao.moeda || "BRL";
+    const quantidadeAtual = Number(posicao?.quantidade || 0);
+    const custoMedioAtual = Number(posicao?.precoMedio || 0);
+    const cotacaoAtual = Number(acao.cotacaoAtual || 0);
+
+    if (!Number.isInteger(quantidade) || quantidade <= 0) {
+        result.innerHTML = `
+            <strong>${acao.ticker}</strong><br>
+            Cotação atual: <strong>${formatMoney(cotacaoAtual, moeda)}</strong><br>
+            Quantidade em carteira: <strong>${quantidadeAtual}</strong><br>
+            Informe uma quantidade inteira maior que zero.
+        `;
+        return;
+    }
+
+    if (!Number.isFinite(precoUnitario) || precoUnitario <= 0) {
+        result.innerHTML = `
+            <strong>${acao.ticker}</strong><br>
+            Cotação atual: <strong>${formatMoney(cotacaoAtual, moeda)}</strong><br>
+            Quantidade em carteira: <strong>${quantidadeAtual}</strong><br>
+            Informe um preço unitário maior que zero.
+        `;
+        return;
+    }
+
+    const total = quantidade * precoUnitario;
+
+    if (tipo === "COMPRA") {
+        const novaQuantidade = quantidadeAtual + quantidade;
+        const custoTotalAtual = custoMedioAtual * quantidadeAtual;
+        const novoCustoMedio = novaQuantidade > 0
+            ? (custoTotalAtual + total) / novaQuantidade
+            : precoUnitario;
+        const saldoProjetado = state.saldo - total;
+        const resultadoVsCotacao = (cotacaoAtual - precoUnitario) * quantidade;
+
+        result.innerHTML = `
+            <strong>${acao.ticker} - compra simulada</strong><br>
+            Total da compra: <strong>${formatMoney(total, moeda)}</strong><br>
+            Saldo projetado: <strong class="${signedClass(saldoProjetado)}">${formatMoney(saldoProjetado, "BRL")}</strong><br>
+            Quantidade após compra: <strong>${novaQuantidade}</strong><br>
+            Novo custo médio: <strong>${formatMoney(novoCustoMedio, moeda)}</strong><br>
+            Diferença contra cotação atual: <strong class="${signedClass(resultadoVsCotacao)}">${formatMoney(resultadoVsCotacao, moeda)}</strong>
+        `;
+        return;
+    }
+
+    const quantidadeRestante = quantidadeAtual - quantidade;
+    const saldoProjetado = state.saldo + total;
+    const resultadoVenda = (precoUnitario - custoMedioAtual) * quantidade;
+    const avisoQuantidade = quantidade > quantidadeAtual
+        ? `<br><strong class="number-negative">Quantidade acima da posição atual.</strong>`
+        : "";
+
+    result.innerHTML = `
+        <strong>${acao.ticker} - venda simulada</strong><br>
+        Total da venda: <strong>${formatMoney(total, moeda)}</strong><br>
+        Saldo projetado: <strong>${formatMoney(saldoProjetado, "BRL")}</strong><br>
+        Quantidade restante: <strong class="${signedClass(quantidadeRestante)}">${quantidadeRestante}</strong><br>
+        Custo médio atual: <strong>${quantidadeAtual ? formatMoney(custoMedioAtual, moeda) : "-"}</strong><br>
+        Resultado estimado da venda: <strong class="${signedClass(resultadoVenda)}">${formatMoney(resultadoVenda, moeda)}</strong>
+        ${avisoQuantidade}
+    `;
 }
 
 function renderUsuarios() {
@@ -401,7 +586,9 @@ function renderCarteira() {
     renderCompras();
     renderOperacoes();
     renderCustoMedio(filteredRows, state.posicoes);
+    renderCalculadoraCarteira();
     renderMediaDuasAcoes();
+    renderCalculadoraDuasAcoesOptions();
 }
 
 function renderCompras() {
@@ -606,6 +793,138 @@ function renderMediaDuasAcoes() {
     `;
 }
 
+function getValorBaseDuasAcoes(ticker) {
+    const acao = getAcaoByTicker(ticker);
+    const posicao = getPosicaoByTicker(ticker);
+    const valor = Number(posicao?.precoMedio ?? acao?.cotacaoAtual ?? 0);
+
+    return {
+        acao,
+        posicao,
+        valor,
+        fonte: posicao ? "custo médio" : "cotação atual"
+    };
+}
+
+function renderCalculadoraDuasAcoesOptions() {
+    if (!elements.calcDuasAcoesA || !elements.calcDuasAcoesB) return;
+
+    const selectedA = elements.calcDuasAcoesA.value;
+    const selectedB = elements.calcDuasAcoesB.value;
+    const acoesOrdenadas = [...state.acoes].sort((a, b) => a.ticker.localeCompare(b.ticker));
+
+    if (acoesOrdenadas.length < 2) {
+        const placeholder = `<option value="">Cadastre duas ações</option>`;
+        elements.calcDuasAcoesA.innerHTML = placeholder;
+        elements.calcDuasAcoesB.innerHTML = placeholder;
+        renderCalculadoraDuasAcoes();
+        return;
+    }
+
+    const options = acoesOrdenadas.map((acao) => {
+        const posicao = getPosicaoByTicker(acao.ticker);
+        const labelPosicao = posicao ? "na carteira" : "sem compra";
+        return `<option value="${acao.ticker}">${acao.ticker} - ${acao.nomeEmpresa || "Ação"} (${labelPosicao})</option>`;
+    }).join("");
+
+    elements.calcDuasAcoesA.innerHTML = options;
+    elements.calcDuasAcoesB.innerHTML = options;
+
+    elements.calcDuasAcoesA.value = acoesOrdenadas.some((acao) => acao.ticker === selectedA)
+        ? selectedA
+        : acoesOrdenadas[0].ticker;
+    elements.calcDuasAcoesB.value = (
+        selectedB &&
+        selectedB !== elements.calcDuasAcoesA.value &&
+        acoesOrdenadas.some((acao) => acao.ticker === selectedB)
+    )
+        ? selectedB
+        : acoesOrdenadas.find((acao) => acao.ticker !== elements.calcDuasAcoesA.value)?.ticker || "";
+
+    renderCalculadoraDuasAcoes();
+}
+
+function usarValoresAtuaisNaCalculadoraDuasAcoes() {
+    const primeira = getValorBaseDuasAcoes(elements.calcDuasAcoesA.value);
+    const segunda = getValorBaseDuasAcoes(elements.calcDuasAcoesB.value);
+
+    if (primeira.acao) elements.calcDuasAcoesPrecoA.value = primeira.valor.toFixed(2);
+    if (segunda.acao) elements.calcDuasAcoesPrecoB.value = segunda.valor.toFixed(2);
+
+    renderCalculadoraDuasAcoes();
+}
+
+function limparCalculadoraDuasAcoes() {
+    elements.calcDuasAcoesQuantidadeA.value = "";
+    elements.calcDuasAcoesQuantidadeB.value = "";
+    elements.calcDuasAcoesPrecoA.value = "";
+    elements.calcDuasAcoesPrecoB.value = "";
+    renderCalculadoraDuasAcoes();
+}
+
+function renderCalculadoraDuasAcoes() {
+    const result = elements.calculadoraDuasAcoesResultado;
+    if (!result) return;
+
+    const primeira = getValorBaseDuasAcoes(elements.calcDuasAcoesA?.value);
+    const segunda = getValorBaseDuasAcoes(elements.calcDuasAcoesB?.value);
+
+    if (!primeira.acao || !segunda.acao) {
+        result.textContent = "Cadastre pelo menos duas ações para comparar.";
+        return;
+    }
+
+    if (primeira.acao.ticker === segunda.acao.ticker) {
+        result.textContent = "Selecione duas ações diferentes.";
+        return;
+    }
+
+    const quantidadeA = parseNumber(elements.calcDuasAcoesQuantidadeA.value || 0);
+    const quantidadeB = parseNumber(elements.calcDuasAcoesQuantidadeB.value || 0);
+    const precoAInformado = elements.calcDuasAcoesPrecoA.value !== "";
+    const precoBInformado = elements.calcDuasAcoesPrecoB.value !== "";
+    const precoA = precoAInformado ? parseNumber(elements.calcDuasAcoesPrecoA.value) : primeira.valor;
+    const precoB = precoBInformado ? parseNumber(elements.calcDuasAcoesPrecoB.value) : segunda.valor;
+
+    if (!Number.isFinite(precoA) || precoA <= 0 || !Number.isFinite(precoB) || precoB <= 0) {
+        result.textContent = "Informe preços válidos ou use os valores atuais.";
+        return;
+    }
+
+    if (quantidadeA < 0 || quantidadeB < 0 || !Number.isInteger(quantidadeA) || !Number.isInteger(quantidadeB)) {
+        result.textContent = "Informe quantidades inteiras iguais ou maiores que zero.";
+        return;
+    }
+
+    const totalA = precoA * quantidadeA;
+    const totalB = precoB * quantidadeB;
+    const totalGeral = totalA + totalB;
+    const diferencaUnitario = precoA - precoB;
+    const diferencaTotal = totalA - totalB;
+    const mediaPonderada = totalGeral > 0
+        ? totalGeral / ((quantidadeA || 0) + (quantidadeB || 0))
+        : (precoA + precoB) / 2;
+    const relacao = precoB > 0 ? precoA / precoB : 0;
+    const moedasIguais = primeira.acao.moeda === segunda.acao.moeda;
+    const avisoMoeda = moedasIguais
+        ? ""
+        : `<br><strong>Moedas diferentes (${primeira.acao.moeda} e ${segunda.acao.moeda}): totais sem conversão cambial.</strong>`;
+
+    result.innerHTML = `
+        <strong>${primeira.acao.ticker}</strong>: ${formatMoney(precoA, primeira.acao.moeda)}
+        (${precoAInformado ? "preço informado" : primeira.fonte}) x ${quantidadeA || 0}
+        = <strong>${formatMoney(totalA, primeira.acao.moeda)}</strong><br>
+        <strong>${segunda.acao.ticker}</strong>: ${formatMoney(precoB, segunda.acao.moeda)}
+        (${precoBInformado ? "preço informado" : segunda.fonte}) x ${quantidadeB || 0}
+        = <strong>${formatMoney(totalB, segunda.acao.moeda)}</strong><br>
+        Diferença unitária: <strong class="${signedClass(diferencaUnitario)}">${formatAverageValue(diferencaUnitario, primeira.acao.moeda, segunda.acao.moeda)}</strong><br>
+        Diferença total: <strong class="${signedClass(diferencaTotal)}">${formatAverageValue(diferencaTotal, primeira.acao.moeda, segunda.acao.moeda)}</strong><br>
+        Relação de preço: <strong>${relacao.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x</strong><br>
+        Média ponderada dos valores: <strong>${formatAverageValue(mediaPonderada, primeira.acao.moeda, segunda.acao.moeda)}</strong>
+        ${avisoMoeda}
+    `;
+}
+
 async function loadCorretoras() {
     try {
         state.corretoras = await requestJson("/corretoras");
@@ -662,6 +981,7 @@ async function verCorretorasPadrao() {
                 <td>Lista padrão</td>
                 <td><span class="badge ok">Validada</span></td>
                 <td>CNPJ incluído na lista padrão local</td>
+                <td>-</td>
             </tr>
         `).join("");
         showToast("Lista padrão exibida.");
@@ -673,15 +993,6 @@ async function verCorretorasPadrao() {
 
 async function carregarAcoesExemplo() {
     try {
-        if (!state.corretoras.length) {
-            await loadCorretoras();
-        }
-
-        const corretora = state.corretoras[0];
-        if (!corretora) {
-            return showToast("Cadastre uma corretora ou carregue a lista padrão antes de criar ações de exemplo.", "error");
-        }
-
         let cadastradas = 0;
         let jaExistentes = 0;
         const falhas = [];
@@ -689,8 +1000,7 @@ async function carregarAcoesExemplo() {
         for (const exemplo of ACOES_EXEMPLO) {
             const payload = {
                 ticker: exemplo.ticker,
-                mercado: exemplo.mercado,
-                corretoraId: corretora.id
+                mercado: exemplo.mercado
             };
 
             try {
@@ -727,7 +1037,6 @@ async function carregarAcoesExemplo() {
         showToast(error.message, "error");
     }
 }
-
 function verAcoesExemplo() {
     renderAcoes(ACOES_EXEMPLO.map((item) => ({
         ...item,
@@ -811,6 +1120,18 @@ async function submitCorretora(event) {
     event.preventDefault();
     const form = event.currentTarget;
     const payload = getFormData(form);
+    payload.cnpj = onlyDigits(payload.cnpj);
+    payload.cep = onlyDigits(payload.cep);
+    payload.numero = String(payload.numero || "").trim();
+    payload.complemento = String(payload.complemento || "").trim();
+
+    if (payload.cnpj.length !== 14) {
+        return showToast("Informe um CNPJ com 14 dígitos.", "error");
+    }
+
+    if (payload.cep.length !== 8) {
+        return showToast("Informe um CEP com 8 dígitos.", "error");
+    }
 
     try {
         const corretora = await requestJson("/corretoras", {
@@ -835,13 +1156,17 @@ async function submitAcao(event) {
     event.preventDefault();
     const form = event.currentTarget;
     const payload = getFormData(form);
-    payload.ticker = payload.ticker.toUpperCase();
-    if (payload.mercado === "BR" && pareceTickerAmericano(payload.ticker)) {
-        payload.mercado = "US";
-        form.elements.mercado.value = "US";
-        showToast(`Mercado alterado para US para cadastrar ${payload.ticker}.`);
+    payload.ticker = String(payload.ticker || "").trim().toUpperCase();
+    if (!payload.ticker) {
+        return showToast("Informe o ticker da ação.", "error");
     }
-    payload.corretoraId = Number(payload.corretoraId);
+
+    const mercadoDetectado = inferirMercadoPorTicker(payload.ticker, payload.mercado);
+    if (payload.mercado !== mercadoDetectado) {
+        payload.mercado = mercadoDetectado;
+        form.elements.mercado.value = mercadoDetectado;
+        showToast(`Mercado detectado para ${payload.ticker}: ${mercadoLabel(mercadoDetectado)}.`);
+    }
 
     try {
         const acao = await requestJson("/acoes", {
@@ -873,10 +1198,51 @@ async function submitAcao(event) {
     }
 }
 
+async function excluirCorretora(id) {
+    if (!id || !window.confirm(`Excluir corretora #${id}?`)) return;
+
+    try {
+        await requestJson(`/corretoras/${encodeURIComponent(id)}`, {
+            method: "DELETE"
+        });
+        state.corretoras = state.corretoras.filter((item) => String(item.id) !== String(id));
+        delete state.validacoesCorretoras[id];
+        renderCorretoras(state.corretoras);
+        showToast("Corretora excluída.");
+        await loadCorretoras();
+    } catch (error) {
+        setStatus("Exclusão de corretora falhou", "error");
+        showToast(error.message, "error");
+    }
+}
+
+async function excluirAcao(id) {
+    if (!id || !window.confirm(`Excluir ação #${id}?`)) return;
+
+    try {
+        await requestJson(`/acoes/${encodeURIComponent(id)}`, {
+            method: "DELETE"
+        });
+        state.acoes = state.acoes.filter((item) => String(item.id) !== String(id));
+        renderAcoes(state.acoes);
+        showToast("Ação excluída.");
+        await loadAcoes();
+        await loadCarteira();
+    } catch (error) {
+        setStatus("Exclusão de ação falhou", "error");
+        showToast(error.message, "error");
+    }
+}
+
 async function submitUsuario(event) {
     event.preventDefault();
     const form = event.currentTarget;
     const payload = getFormData(form);
+    payload.nome = String(payload.nome || "").trim();
+
+    if (!payload.nome) {
+        return showToast("Informe o nome do usuário.", "error");
+    }
 
     try {
         const usuario = await requestJson("/usuarios", {
@@ -909,6 +1275,10 @@ async function submitDeposito(event) {
     const payload = getFormData(form);
     payload.valor = parseNumber(payload.valor);
 
+    if (!Number.isFinite(payload.valor) || payload.valor <= 0) {
+        return showToast("Informe um valor de depósito maior que zero.", "error");
+    }
+
     try {
         await requestJson(`/financeiro/deposito/${encodeURIComponent(usuarioId)}`, {
             method: "POST",
@@ -936,6 +1306,12 @@ async function submitOperacao(event) {
     payload.precoUnitario = parseNumber(payload.precoUnitario);
 
     if (!payload.acaoId) return showToast("Cadastre e selecione uma ação.", "error");
+    if (!Number.isInteger(payload.quantidade) || payload.quantidade <= 0) {
+        return showToast("Informe uma quantidade inteira maior que zero.", "error");
+    }
+    if (!Number.isFinite(payload.precoUnitario) || payload.precoUnitario <= 0) {
+        return showToast("Informe um preço unitário maior que zero.", "error");
+    }
 
     const totalOperacao = payload.quantidade * payload.precoUnitario;
     if (payload.tipo === "COMPRA" && totalOperacao > state.saldo) {
@@ -982,8 +1358,9 @@ async function submitOperacao(event) {
 }
 
 async function buscarCorretoraPorCnpj() {
-    const cnpj = $("#buscarCnpj").value.trim();
+    const cnpj = onlyDigits($("#buscarCnpj").value);
     if (!cnpj) return showToast("Informe um CNPJ para buscar.", "error");
+    if (cnpj.length !== 14) return showToast("Informe um CNPJ com 14 dígitos.", "error");
 
     try {
         const corretora = await requestJson(`/corretoras/cnpj/${encodeURIComponent(cnpj)}`);
@@ -996,7 +1373,7 @@ async function buscarCorretoraPorCnpj() {
 }
 
 async function buscarCorretoraPorId() {
-    const id = $("#buscarCorretoraId").value.trim();
+    const id = onlyDigits($("#buscarCorretoraId").value);
     if (!id) return showToast("Informe um ID de corretora.", "error");
 
     try {
@@ -1010,11 +1387,11 @@ async function buscarCorretoraPorId() {
 }
 
 async function buscarAcaoPorTicker() {
-    const ticker = $("#buscarTicker").value.trim();
+    const ticker = $("#buscarTicker").value.trim().toUpperCase();
     if (!ticker) return showToast("Informe um ticker para buscar.", "error");
 
     try {
-        const acao = await requestJson(`/acoes/ticker/${encodeURIComponent(ticker.toUpperCase())}`);
+        const acao = await requestJson(`/acoes/ticker/${encodeURIComponent(ticker)}`);
         renderAcoes([acao]);
     } catch (error) {
         setStatus("Busca por ticker falhou", "error");
@@ -1023,7 +1400,7 @@ async function buscarAcaoPorTicker() {
 }
 
 async function atualizarCotacao() {
-    const id = $("#acaoIdCotacao").value.trim();
+    const id = onlyDigits($("#acaoIdCotacao").value);
     if (!id) return showToast("Informe o ID da ação.", "error");
 
     try {
@@ -1055,6 +1432,17 @@ function bindEvents() {
     elements.corretoraForm.addEventListener("submit", submitCorretora);
     elements.acaoForm.addEventListener("submit", submitAcao);
     elements.acaoForm.elements.ticker.addEventListener("input", sugerirMercadoDaAcao);
+    elements.themeToggle.addEventListener("click", toggleTheme);
+    elements.corretorasBody.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-delete-corretora]");
+        if (!button) return;
+        excluirCorretora(button.dataset.deleteCorretora);
+    });
+    elements.acoesBody.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-delete-acao]");
+        if (!button) return;
+        excluirAcao(button.dataset.deleteAcao);
+    });
     elements.usuarioForm.addEventListener("submit", submitUsuario);
     elements.depositoForm.addEventListener("submit", submitDeposito);
     elements.operacaoForm.addEventListener("submit", submitOperacao);
@@ -1070,6 +1458,11 @@ function bindEvents() {
     elements.operacaoForm.elements.acaoId.addEventListener("change", renderOperacaoResumo);
     elements.operacaoForm.elements.quantidade.addEventListener("input", renderOperacaoResumo);
     elements.operacaoForm.elements.precoUnitario.addEventListener("input", renderOperacaoResumo);
+    elements.calculadoraAcao.addEventListener("change", renderCalculadoraCarteira);
+    elements.calculadoraTipo.addEventListener("change", renderCalculadoraCarteira);
+    elements.calculadoraQuantidade.addEventListener("input", renderCalculadoraCarteira);
+    elements.calculadoraPreco.addEventListener("input", renderCalculadoraCarteira);
+    elements.usarCotacaoCalculadora.addEventListener("click", usarCotacaoAtualNaCalculadora);
     elements.usuarioSelect.addEventListener("change", loadCarteira);
     elements.mediaAcaoA.addEventListener("change", () => {
         state.mediaAcaoA = elements.mediaAcaoA.value;
@@ -1079,6 +1472,14 @@ function bindEvents() {
         state.mediaAcaoB = elements.mediaAcaoB.value;
         renderMediaDuasAcoes();
     });
+    elements.calcDuasAcoesA.addEventListener("change", renderCalculadoraDuasAcoesOptions);
+    elements.calcDuasAcoesB.addEventListener("change", renderCalculadoraDuasAcoes);
+    elements.calcDuasAcoesQuantidadeA.addEventListener("input", renderCalculadoraDuasAcoes);
+    elements.calcDuasAcoesQuantidadeB.addEventListener("input", renderCalculadoraDuasAcoes);
+    elements.calcDuasAcoesPrecoA.addEventListener("input", renderCalculadoraDuasAcoes);
+    elements.calcDuasAcoesPrecoB.addEventListener("input", renderCalculadoraDuasAcoes);
+    elements.usarValoresAtuaisDuasAcoes.addEventListener("click", usarValoresAtuaisNaCalculadoraDuasAcoes);
+    elements.limparCalculadoraDuasAcoes.addEventListener("click", limparCalculadoraDuasAcoes);
     $("#refreshCorretoras").addEventListener("click", loadCorretoras);
     $("#carregarCorretorasPadrao").addEventListener("click", carregarCorretorasPadrao);
     $("#verCorretorasPadrao").addEventListener("click", verCorretorasPadrao);
@@ -1104,6 +1505,7 @@ function bindEvents() {
 }
 
 async function init() {
+    applyTheme(document.body.dataset.theme);
     bindEvents();
     await Promise.all([loadCorretoras(), loadAcoes(), loadUsuarios()]);
     await loadCarteira();

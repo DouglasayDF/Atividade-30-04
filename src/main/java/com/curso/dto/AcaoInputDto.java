@@ -2,7 +2,6 @@ package com.curso.dto;
 
 import com.curso.enums.Mercado;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
 public class AcaoInputDto {
@@ -12,10 +11,8 @@ public class AcaoInputDto {
     @Pattern(regexp = "^[A-Za-z0-9.\\-]{1,10}$")
     private String ticker;
 
-    @NotNull
     private Mercado mercado;
 
-    @NotNull
     private Long corretoraId;
 
     public String getTicker() {

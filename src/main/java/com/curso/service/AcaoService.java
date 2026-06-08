@@ -1,12 +1,13 @@
 package com.curso.service;
 
+import com.curso.cliente.BrapiCliente;
 import com.curso.domains.Acao;
-import com.curso.domains.Corretora;
 import com.curso.dto.AcaoInputDto;
+import com.curso.dto.BrapiListResponseDto;
+import com.curso.enums.Mercado;
 import com.curso.enums.Moeda;
 import com.curso.exception.AcaoNaoEncontradaException;
 import com.curso.exception.MoedaInvalidaException;
-import com.curso.repository.CorretoraRepository;
 import com.curso.dto.CotacaoOutputDto;
 import com.curso.exception.TickerInvalidoException;
 import com.curso.repository.AcaoRepository;
@@ -15,21 +16,22 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 @Transactional
 @Service
 public class AcaoService {
 
     private final AcaoRepository repository;
-    private final CorretoraRepository corretoraRepository;
     private final CotacaoFactory cotacaoFactory;
+    private final BrapiCliente brapiCliente;
 
     public AcaoService(AcaoRepository repository,
-                       CorretoraRepository corretoraRepository,
-                       CotacaoFactory cotacaoFactory) {
+                       CotacaoFactory cotacaoFactory,
+                       BrapiCliente brapiCliente) {
         this.repository = repository;
-        this.corretoraRepository = corretoraRepository;
         this.cotacaoFactory = cotacaoFactory;
+        this.brapiCliente = brapiCliente;
     }
 
 
@@ -38,19 +40,58 @@ public class AcaoService {
         return repository.findAll();
     }
 
+    public BrapiListResponseDto listarAcoesBrapi(
+            String search,
+            String sortBy,
+            String sortOrder,
+            Integer limit,
+            Integer page,
+            String sector,
+            String type,
+            String subType,
+            String token) {
+        return brapiCliente.listarAcoes(
+                search,
+                sortBy,
+                sortOrder,
+                limit,
+                page,
+                sector,
+                type,
+                subType,
+                token
+        );
+    }
+
+    private Mercado inferirMercadoPorTicker(String ticker, Mercado mercadoInformado) {
+        String tickerNormalizado = ticker == null
+                ? ""
+                : ticker.trim().toUpperCase(Locale.ROOT);
+
+        if (tickerNormalizado.matches("^[A-Z]{4}\\d{1,2}[A-Z]?$") ||
+                tickerNormalizado.matches("^[A-Z0-9]+\\.SA$")) {
+            return Mercado.BR;
+        }
+
+        if (tickerNormalizado.matches("^[A-Z]{1,5}([.-][A-Z])?$")) {
+            return Mercado.US;
+        }
+
+        return mercadoInformado != null ? mercadoInformado : Mercado.BR;
+    }
+
     public Acao cadastrar(AcaoInputDto dto) {
 
-        String tickerNormalizado = dto.getTicker().toUpperCase();
+        String tickerNormalizado = dto.getTicker().trim().toUpperCase(Locale.ROOT);
+        Mercado mercado = inferirMercadoPorTicker(tickerNormalizado, dto.getMercado());
 
         if (repository.existsByTicker(tickerNormalizado)) {
             throw new TickerInvalidoException("Ticker já cadastrado");
         }
 
-        Corretora corretora = corretoraRepository.findById(dto.getCorretoraId())
-                .orElseThrow(() -> new RuntimeException("Corretora não encontrada"));
 
         CotacaoOutputDto cotacao = cotacaoFactory.executar(
-                dto.getMercado(),
+                mercado,
                // dto.getTicker()
                 tickerNormalizado
         );
@@ -59,7 +100,7 @@ public class AcaoService {
 
        // a.setTicker(dto.getTicker());
         a.setTicker(tickerNormalizado);
-        a.setMercado(dto.getMercado());
+        a.setMercado(mercado);
 
         try {
             a.setMoeda(Moeda.valueOf(cotacao.getMoeda()));
@@ -69,7 +110,6 @@ public class AcaoService {
         a.setCotacaoAtual(cotacao.getCotacao());
         a.setNomeEmpresa(cotacao.getNomeEmpresa());
         a.setDataHoraCotacao(LocalDateTime.now());
-        a.setCorretora(corretora);
 
         return repository.save(a);
     }
