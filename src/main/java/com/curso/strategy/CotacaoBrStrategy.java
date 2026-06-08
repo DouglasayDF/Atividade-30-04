@@ -45,15 +45,49 @@ public class CotacaoBrStrategy implements CotacaoStrategy {
 
             return dto;
         } catch (RuntimeException error) {
-            return buscarFallback(ticker, error);
+            return buscarNaListaOuFallback(ticker, error);
         }
     }
 
-    private CotacaoOutputDto buscarFallback(String ticker, RuntimeException error) {
+    private CotacaoOutputDto buscarNaListaOuFallback(String ticker, RuntimeException quoteError) {
         String tickerNormalizado = ticker.toUpperCase(Locale.ROOT);
+        try {
+            var response = client.listarAcoes(
+                    tickerNormalizado,
+                    null,
+                    null,
+                    10,
+                    1,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+
+            var stock = response.getStocks() == null
+                    ? null
+                    : response.getStocks().stream()
+                            .filter(item -> tickerNormalizado.equalsIgnoreCase(item.getStock()))
+                            .filter(item -> item.getClose() != null)
+                            .findFirst()
+                            .orElse(null);
+
+            if (stock != null) {
+                CotacaoOutputDto dto = new CotacaoOutputDto();
+                dto.setTicker(tickerNormalizado);
+                dto.setNomeEmpresa(stock.getName());
+                dto.setMoeda("BRL");
+                dto.setCotacao(stock.getClose());
+                dto.setDataHora(LocalDateTime.now());
+                return dto;
+            }
+        } catch (RuntimeException ignored) {
+            // A tabela local ainda permite usar os exemplos quando a BRAPI inteira está indisponível.
+        }
+
         FallbackQuote quote = FALLBACK_QUOTES.get(tickerNormalizado);
         if (quote == null) {
-            throw error;
+            throw quoteError;
         }
 
         CotacaoOutputDto dto = new CotacaoOutputDto();

@@ -592,6 +592,10 @@ tbody tr:last-child td {
 }
 
 @media (max-width: 760px) {
+    .app-header {
+        position: static;
+    }
+
     .app-header,
     .section-heading {
         align-items: stretch;

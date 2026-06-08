@@ -152,7 +152,7 @@ function setTipoOperacao(tipo) {
     const normalized = tipo === "VENDA" ? "VENDA" : "COMPRA";
     elements.tipoOperacao.value = normalized;
     elements.tipoOperacaoLabel.value = normalized === "VENDA"
-        ? "Venda pela compra"
+        ? "Venda da posição"
         : "Compra";
     renderOperacaoResumo();
 }
@@ -959,9 +959,13 @@ async function carregarCorretorasPadrao() {
         const criadas = await requestJson("/corretoras/padrao", {
             method: "POST"
         });
-        showToast(criadas.length
-            ? `${criadas.length} corretora(s) padrão cadastrada(s).`
-            : "Lista padrão já estava cadastrada.");
+        if (criadas.length === 1) {
+            showToast("1 corretora padrão cadastrada.");
+        } else if (criadas.length > 1) {
+            showToast(`${criadas.length} corretoras padrão cadastradas.`);
+        } else {
+            showToast("A lista padrão já estava cadastrada.");
+        }
         await loadCorretoras();
     } catch (error) {
         setStatus("Carga da lista padrão falhou", "error");
@@ -998,6 +1002,14 @@ async function carregarAcoesExemplo() {
         const falhas = [];
 
         for (const exemplo of ACOES_EXEMPLO) {
+            const jaCadastrada = state.acoes.some(
+                (item) => item.ticker?.toUpperCase() === exemplo.ticker
+            );
+            if (jaCadastrada) {
+                jaExistentes += 1;
+                continue;
+            }
+
             const payload = {
                 ticker: exemplo.ticker,
                 mercado: exemplo.mercado
@@ -1026,12 +1038,26 @@ async function carregarAcoesExemplo() {
 
         if (falhas.length) {
             setStatus("Alguns exemplos falharam", "error");
-            return showToast(`Criadas: ${cadastradas}. Já existentes: ${jaExistentes}. Falhas: ${falhas.join(" | ")}`, "error");
+            return showToast(
+                `Cadastradas: ${cadastradas}. Já existentes: ${jaExistentes}. Falhas: ${falhas.join(" | ")}`,
+                "error"
+            );
         }
 
-        showToast(cadastradas
-            ? `${cadastradas} ação(ões) de exemplo cadastrada(s). ${jaExistentes} já existia(m).`
-            : "As ações de exemplo já estavam cadastradas.");
+        if (!cadastradas) {
+            showToast("As ações de exemplo já estavam cadastradas.");
+            return;
+        }
+
+        const cadastradasMensagem = cadastradas === 1
+            ? "1 ação de exemplo cadastrada."
+            : `${cadastradas} ações de exemplo cadastradas.`;
+        const existentesMensagem = jaExistentes === 1
+            ? "1 ação já estava cadastrada."
+            : jaExistentes > 1
+                ? `${jaExistentes} ações já estavam cadastradas.`
+                : "";
+        showToast(`${cadastradasMensagem} ${existentesMensagem}`.trim());
     } catch (error) {
         setStatus("Carga de ações de exemplo falhou", "error");
         showToast(error.message, "error");
