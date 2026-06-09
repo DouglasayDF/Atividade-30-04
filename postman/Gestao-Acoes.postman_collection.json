@@ -1,0 +1,596 @@
+{
+  "info": {
+    "_postman_id": "455aeb47-2ee1-4d7f-92a5-30a400000001",
+    "name": "Gestão de Corretoras, Ações e Carteira",
+    "description": "Coleção completa da API. Execute a aplicação em localhost:8080. Requisições de criação salvam automaticamente os IDs nas variáveis da coleção quando retornam sucesso.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "corretoraId",
+      "value": "1"
+    },
+    {
+      "key": "cnpj",
+      "value": "00000000000191"
+    },
+    {
+      "key": "cep",
+      "value": "01310100"
+    },
+    {
+      "key": "acaoIdBR",
+      "value": "1"
+    },
+    {
+      "key": "tickerBR",
+      "value": "PETR4"
+    },
+    {
+      "key": "acaoIdUS",
+      "value": "2"
+    },
+    {
+      "key": "tickerUS",
+      "value": "AAPL"
+    },
+    {
+      "key": "usuarioId",
+      "value": "1"
+    },
+    {
+      "key": "compraOperacaoId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Status",
+      "item": [
+        {
+          "name": "Testar API",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/teste",
+            "description": "Deve responder com o texto: ok"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Corretoras",
+      "item": [
+        {
+          "name": "Listar corretoras padrão",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/corretoras/padrao"
+          }
+        },
+        {
+          "name": "Cadastrar corretoras padrão",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/corretoras/padrao",
+            "description": "Cadastra apenas as corretoras padrão que ainda não existem."
+          }
+        },
+        {
+          "name": "Cadastrar corretora",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) pm.collectionVariables.set('corretoraId', json.id);",
+                  "  if (json.cnpj) pm.collectionVariables.set('cnpj', json.cnpj);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cnpj\": \"{{cnpj}}\",\n  \"cep\": \"{{cep}}\",\n  \"numero\": \"122\",\n  \"complemento\": \"Sala 12\"\n}"
+            },
+            "url": "{{baseUrl}}/corretoras",
+            "description": "O CNPJ deve ter 14 dígitos, o CEP 8 dígitos e ambos precisam existir nas APIs externas. Use um CNPJ ainda não cadastrado."
+          }
+        },
+        {
+          "name": "Listar corretoras",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/corretoras"
+          }
+        },
+        {
+          "name": "Buscar corretora por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/corretoras/{{corretoraId}}"
+          }
+        },
+        {
+          "name": "Buscar corretora por CNPJ",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/corretoras/cnpj/{{cnpj}}"
+          }
+        },
+        {
+          "name": "Validar corretora",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/corretoras/{{corretoraId}}/validacao"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ações",
+      "item": [
+        {
+          "name": "Cadastrar ação brasileira",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) pm.collectionVariables.set('acaoIdBR', json.id);",
+                  "  if (json.ticker) pm.collectionVariables.set('tickerBR', json.ticker);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticker\": \"PETR4\",\n  \"mercado\": \"BR\",\n  \"corretoraId\": {{corretoraId}}\n}"
+            },
+            "url": "{{baseUrl}}/acoes",
+            "description": "Ticker de exemplo da B3. O sistema também consegue inferir o mercado pelo formato do ticker."
+          }
+        },
+        {
+          "name": "Cadastrar ação americana",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) pm.collectionVariables.set('acaoIdUS', json.id);",
+                  "  if (json.ticker) pm.collectionVariables.set('tickerUS', json.ticker);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticker\": \"AAPL\",\n  \"mercado\": \"US\",\n  \"corretoraId\": {{corretoraId}}\n}"
+            },
+            "url": "{{baseUrl}}/acoes"
+          }
+        },
+        {
+          "name": "Listar ações cadastradas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/acoes"
+          }
+        },
+        {
+          "name": "Pesquisar ações na Brapi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/acoes/brapi/list?search=PETR&limit=10&page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "acoes",
+                "brapi",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "PETR"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "stock",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "asc",
+                  "disabled": true
+                },
+                {
+                  "key": "sector",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "type",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "subType",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "token",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Os parâmetros são opcionais e encaminhados para a Brapi. Token pode ser necessário conforme o uso da API externa."
+          }
+        },
+        {
+          "name": "Buscar ação por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/acoes/{{acaoIdBR}}"
+          }
+        },
+        {
+          "name": "Buscar ação por ticker",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/acoes/ticker/{{tickerBR}}"
+          }
+        },
+        {
+          "name": "Atualizar cotação",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "{{baseUrl}}/acoes/{{acaoIdBR}}/atualizar-cotacao",
+            "description": "Não possui body. Salva a cotação anterior no histórico, limitado aos cinco registros mais recentes."
+          }
+        },
+        {
+          "name": "Consultar histórico da cotação",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/acoes/{{acaoIdBR}}/historico"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuários",
+      "item": [
+        {
+          "name": "Criar usuário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) pm.collectionVariables.set('usuarioId', json.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Usuário Postman\"\n}"
+            },
+            "url": "{{baseUrl}}/usuarios"
+          }
+        },
+        {
+          "name": "Listar usuários",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/usuarios"
+          }
+        },
+        {
+          "name": "Buscar usuário por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/usuarios/{{usuarioId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Financeiro",
+      "item": [
+        {
+          "name": "Depositar reais",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valor\": 10000.00,\n  \"moeda\": \"BRL\"\n}"
+            },
+            "url": "{{baseUrl}}/financeiro/deposito/{{usuarioId}}"
+          }
+        },
+        {
+          "name": "Depositar dólares",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valor\": 5000.00,\n  \"moeda\": \"USD\"\n}"
+            },
+            "url": "{{baseUrl}}/financeiro/deposito/{{usuarioId}}"
+          }
+        },
+        {
+          "name": "Consultar saldos BRL e USD",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/financeiro/saldo/{{usuarioId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Operações da carteira",
+      "item": [
+        {
+          "name": "Comprar ação brasileira",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) pm.collectionVariables.set('compraOperacaoId', json.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"acaoId\": {{acaoIdBR}},\n  \"usuarioId\": {{usuarioId}},\n  \"tipo\": \"COMPRA\",\n  \"quantidade\": 10,\n  \"precoUnitario\": 32.50\n}"
+            },
+            "url": "{{baseUrl}}/operacoes",
+            "description": "Exige saldo BRL suficiente. O ID retornado é salvo em compraOperacaoId para o exemplo de venda."
+          }
+        },
+        {
+          "name": "Comprar ação americana",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"acaoId\": {{acaoIdUS}},\n  \"usuarioId\": {{usuarioId}},\n  \"tipo\": \"COMPRA\",\n  \"quantidade\": 2,\n  \"precoUnitario\": 250.00\n}"
+            },
+            "url": "{{baseUrl}}/operacoes",
+            "description": "Exige saldo USD suficiente."
+          }
+        },
+        {
+          "name": "Vender uma compra",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"acaoId\": {{acaoIdBR}},\n  \"usuarioId\": {{usuarioId}},\n  \"tipo\": \"VENDA\",\n  \"quantidade\": 10,\n  \"precoUnitario\": 41.22,\n  \"compraOrigemId\": {{compraOperacaoId}}\n}"
+            },
+            "url": "{{baseUrl}}/operacoes",
+            "description": "compraOrigemId é o ID da operação do tipo COMPRA retornada por POST /operacoes. Não é o ID retornado por POST /compras."
+          }
+        },
+        {
+          "name": "Listar todas as operações",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/operacoes"
+          }
+        },
+        {
+          "name": "Consultar posição de uma ação",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/operacoes/posicao/{{acaoIdBR}}",
+            "description": "Calcula a posição da ação considerando operações de todos os usuários."
+          }
+        },
+        {
+          "name": "Consultar carteira do usuário",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/operacoes/carteira/{{usuarioId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Compra legada",
+      "item": [
+        {
+          "name": "Registrar compra legada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"acaoId\": {{acaoIdBR}},\n  \"quantidade\": 5\n}"
+            },
+            "url": "{{baseUrl}}/compras",
+            "description": "Fluxo separado e legado. Busca a cotação atual e grava na tabela compras, mas não registra saldo nem posição na carteira de usuário."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documentação",
+      "item": [
+        {
+          "name": "OpenAPI JSON",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v3/api-docs"
+          }
+        },
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/swagger-ui/index.html",
+            "description": "Retorna a página HTML do Swagger."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Exclusões - execute por último",
+      "item": [
+        {
+          "name": "Excluir usuário",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/usuarios/{{usuarioId}}",
+            "description": "Também remove operações e lançamentos financeiros do usuário."
+          }
+        },
+        {
+          "name": "Excluir ação",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/acoes/{{acaoIdBR}}",
+            "description": "Retorna conflito 409 enquanto existirem operações vinculadas à ação."
+          }
+        },
+        {
+          "name": "Excluir corretora",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/corretoras/{{corretoraId}}",
+            "description": "Não permite excluir uma corretora com ações vinculadas."
+          }
+        }
+      ]
+    }
+  ]
+}
