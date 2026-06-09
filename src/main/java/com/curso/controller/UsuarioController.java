@@ -4,6 +4,7 @@ import com.curso.domains.Usuario;
 import com.curso.dto.UsuarioInputDto;
 import com.curso.service.UsuarioService;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,5 +32,11 @@ public class UsuarioController {
     @GetMapping("/{id}")
     public Usuario buscarPorId(@PathVariable Long id) {
         return service.buscarPorId(id);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deletar(@PathVariable Long id) {
+        service.deletar(id);
+        return ResponseEntity.ok("Usuário removido com sucesso");
     }
 }

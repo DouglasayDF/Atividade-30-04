@@ -14,6 +14,7 @@ public class AcaoOutputDto {
     private Mercado mercado;
     private Moeda moeda;
     private BigDecimal cotacaoAtual;
+    private boolean temHistorico;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonFormat(pattern = "dd-MM-yyyy HH:mm:ss")
@@ -65,6 +66,14 @@ public class AcaoOutputDto {
 
     public void setCotacaoAtual(BigDecimal cotacaoAtual) {
         this.cotacaoAtual = cotacaoAtual;
+    }
+
+    public boolean isTemHistorico() {
+        return temHistorico;
+    }
+
+    public void setTemHistorico(boolean temHistorico) {
+        this.temHistorico = temHistorico;
     }
 
     public LocalDateTime getDataHoraCotacao() {

@@ -2,15 +2,20 @@ package com.curso.service;
 
 import com.curso.cliente.BrapiCliente;
 import com.curso.domains.Acao;
+import com.curso.domains.HistoricoCotacao;
 import com.curso.dto.AcaoInputDto;
 import com.curso.dto.BrapiListResponseDto;
+import com.curso.dto.HistoricoCotacaoOutputDto;
 import com.curso.enums.Mercado;
 import com.curso.enums.Moeda;
+import com.curso.exception.AcaoEmUsoException;
 import com.curso.exception.AcaoNaoEncontradaException;
 import com.curso.exception.MoedaInvalidaException;
 import com.curso.dto.CotacaoOutputDto;
 import com.curso.exception.TickerInvalidoException;
 import com.curso.repository.AcaoRepository;
+import com.curso.repository.HistoricoCotacaoRepository;
+import com.curso.repository.OperacaoRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -22,14 +27,22 @@ import java.util.Locale;
 @Service
 public class AcaoService {
 
+    private static final int LIMITE_HISTORICO = 5;
+
     private final AcaoRepository repository;
+    private final OperacaoRepository operacaoRepository;
+    private final HistoricoCotacaoRepository historicoRepository;
     private final CotacaoFactory cotacaoFactory;
     private final BrapiCliente brapiCliente;
 
     public AcaoService(AcaoRepository repository,
+                       OperacaoRepository operacaoRepository,
+                       HistoricoCotacaoRepository historicoRepository,
                        CotacaoFactory cotacaoFactory,
                        BrapiCliente brapiCliente) {
         this.repository = repository;
+        this.operacaoRepository = operacaoRepository;
+        this.historicoRepository = historicoRepository;
         this.cotacaoFactory = cotacaoFactory;
         this.brapiCliente = brapiCliente;
     }
@@ -124,12 +137,47 @@ public class AcaoService {
                 acao.getTicker()
         );
 
+        salvarHistorico(acao);
+
         acao.setCotacaoAtual(cotacao.getCotacao());
         acao.setDataHoraCotacao(LocalDateTime.now());
         acao.setNomeEmpresa(cotacao.getNomeEmpresa());
 
         return repository.save(acao);
 
+    }
+
+    public List<HistoricoCotacaoOutputDto> listarHistorico(Long id) {
+        buscarPorId(id);
+
+        return historicoRepository
+                .findByAcaoIdOrderByDataHoraCotacaoDescIdDesc(id)
+                .stream()
+                .map(this::toHistoricoDto)
+                .toList();
+    }
+
+    private void salvarHistorico(Acao acao) {
+        HistoricoCotacao historico = new HistoricoCotacao();
+        historico.setAcao(acao);
+        historico.setCotacao(acao.getCotacaoAtual());
+        historico.setDataHoraCotacao(acao.getDataHoraCotacao());
+        historicoRepository.save(historico);
+
+        List<HistoricoCotacao> registros =
+                historicoRepository.findByAcaoIdOrderByDataHoraCotacaoDescIdDesc(acao.getId());
+
+        if (registros.size() > LIMITE_HISTORICO) {
+            historicoRepository.deleteAll(registros.subList(LIMITE_HISTORICO, registros.size()));
+        }
+    }
+
+    private HistoricoCotacaoOutputDto toHistoricoDto(HistoricoCotacao historico) {
+        HistoricoCotacaoOutputDto dto = new HistoricoCotacaoOutputDto();
+        dto.setId(historico.getId());
+        dto.setCotacao(historico.getCotacao());
+        dto.setDataHoraCotacao(historico.getDataHoraCotacao());
+        return dto;
     }
 
 
@@ -149,5 +197,15 @@ public class AcaoService {
     public void deletar(Long id) {
         Acao acao = repository.findById(id) .orElseThrow(() ->
                 new AcaoNaoEncontradaException("Ação não encontrada"));
-        repository.delete(acao); }
+
+        if (operacaoRepository.existsByAcaoId(id)) {
+            throw new AcaoEmUsoException(
+                    "Não é possível excluir a ação " + acao.getTicker()
+                            + ": existem operações vinculadas"
+            );
+        }
+
+        historicoRepository.deleteByAcaoId(id);
+        repository.delete(acao);
+    }
 }

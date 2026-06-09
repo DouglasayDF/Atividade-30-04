@@ -60,6 +60,14 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(ex.getMessage()));
     }
 
+    @ExceptionHandler(AcaoEmUsoException.class)
+    public ResponseEntity<ErrorResponse> handleAcaoEmUso(
+            AcaoEmUsoException ex) {
+
+        return ResponseEntity.status(409)
+                .body(new ErrorResponse(ex.getMessage()));
+    }
+
     @ExceptionHandler(MoedaInvalidaException.class)
     public ResponseEntity<ErrorResponse> handleMoeda(
             MoedaInvalidaException ex) {

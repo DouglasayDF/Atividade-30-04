@@ -15,7 +15,7 @@ const state = {
     usuarios: [],
     posicoes: [],
     operacoes: [],
-    saldo: 0,
+    saldos: { BRL: 0, USD: 0 },
     usuarioId: localStorage.getItem("usuarioCarteiraId") || "",
     filtroCarteira: "",
     mediaAcaoA: "",
@@ -39,6 +39,9 @@ const elements = {
     toast: $("#toast"),
     corretorasBody: $("#corretorasBody"),
     acoesBody: $("#acoesBody"),
+    historicoCotacaoDialog: $("#historicoCotacaoDialog"),
+    historicoCotacaoTitle: $("#historicoCotacaoTitle"),
+    historicoCotacaoBody: $("#historicoCotacaoBody"),
     carteiraBody: $("#carteiraBody"),
     comprasBody: $("#comprasBody"),
     operacoesBody: $("#operacoesBody"),
@@ -47,6 +50,7 @@ const elements = {
     usuarioForm: $("#usuarioForm"),
     depositoForm: $("#depositoForm"),
     operacaoForm: $("#operacaoForm"),
+    excluirUsuario: $("#excluirUsuario"),
     tipoOperacao: $("#tipoOperacao"),
     tipoOperacaoLabel: $("#tipoOperacaoLabel"),
     novaCompraOperacao: $("#novaCompraOperacao"),
@@ -67,6 +71,7 @@ const elements = {
     calcDuasAcoesQuantidadeB: $("#calcDuasAcoesQuantidadeB"),
     calcDuasAcoesPrecoA: $("#calcDuasAcoesPrecoA"),
     calcDuasAcoesPrecoB: $("#calcDuasAcoesPrecoB"),
+    calcDuasAcoesOperacao: $("#calcDuasAcoesOperacao"),
     usarValoresAtuaisDuasAcoes: $("#usarValoresAtuaisDuasAcoes"),
     limparCalculadoraDuasAcoes: $("#limparCalculadoraDuasAcoes"),
     calculadoraDuasAcoesResultado: $("#calculadoraDuasAcoesResultado"),
@@ -151,19 +156,47 @@ function onlyDigits(value) {
 function setTipoOperacao(tipo) {
     const normalized = tipo === "VENDA" ? "VENDA" : "COMPRA";
     elements.tipoOperacao.value = normalized;
+    if (normalized === "COMPRA") {
+        elements.operacaoForm.elements.compraOrigemId.value = "";
+    }
     elements.tipoOperacaoLabel.value = normalized === "VENDA"
         ? "Venda da posição"
         : "Compra";
+    $("#precoOperacaoLabel").textContent = normalized === "VENDA"
+        ? "Vender ação por:"
+        : "Comprar ação por:";
     renderOperacaoResumo();
 }
 
 function formatMoney(value, currency = "BRL") {
     if (value === null || value === undefined || value === "") return "-";
     const locale = currency === "USD" ? "en-US" : "pt-BR";
-    return new Intl.NumberFormat(locale, {
+    const formatted = new Intl.NumberFormat(locale, {
         style: "currency",
         currency
     }).format(Number(value));
+
+    return currency === "USD"
+        ? formatted.replace("$", "$ ")
+        : formatted;
+}
+
+function getSaldoPorMoeda(moeda) {
+    const normalized = moeda === "USD" ? "USD" : "BRL";
+    return Number(state.saldos[normalized] || 0);
+}
+
+function formatCurrencyValues(values, signed = false) {
+    return ["BRL", "USD"].map((moeda) => {
+        const value = Number(values[moeda] || 0);
+        const className = signed ? signedClass(value) : "";
+        return `
+            <span class="currency-value">
+                <span class="currency-code">${moeda}</span>
+                <span class="currency-amount ${className}">${formatMoney(value, moeda)}</span>
+            </span>
+        `;
+    }).join("");
 }
 
 function formatAverageValue(value, moedaA, moedaB) {
@@ -266,8 +299,9 @@ function getOperacaoPreview() {
 function renderOperacaoResumo() {
     const { acao, posicao, quantidade, precoUnitario, total } = getOperacaoPreview();
     const tipo = elements.tipoOperacao.value;
-    const saldoAposCompra = state.saldo - total;
     const moeda = acao?.moeda || "BRL";
+    const saldoAtual = getSaldoPorMoeda(moeda);
+    const saldoAposCompra = saldoAtual - total;
     const cotacaoAtual = Number(acao?.cotacaoAtual || 0);
     const custoMedio = Number(posicao?.precoMedio || 0);
     const quantidadeDisponivel = Number(posicao?.quantidade || 0);
@@ -281,13 +315,13 @@ function renderOperacaoResumo() {
         return;
     }
 
-    if (tipo === "COMPRA" && total > state.saldo) {
+    if (tipo === "COMPRA" && total > saldoAtual) {
         elements.operacaoResumo.classList.add("warning");
         elements.operacaoResumo.innerHTML = `
             Cotação atual da ação: <strong>${formatMoney(cotacaoAtual, moeda)}</strong><br>
             Total estimado: <strong>${formatMoney(total, moeda)}</strong><br>
             Lucro bruto estimado da compra: <strong class="${signedClass(lucroBrutoCompra)}">${formatMoney(lucroBrutoCompra, moeda)}</strong><br>
-            Saldo insuficiente: <strong>${formatMoney(state.saldo, "BRL")}</strong>
+            Saldo insuficiente em ${moeda}: <strong>${formatMoney(saldoAtual, moeda)}</strong>
         `;
         return;
     }
@@ -297,7 +331,7 @@ function renderOperacaoResumo() {
             Cotação atual da ação: <strong>${formatMoney(cotacaoAtual, moeda)}</strong><br>
             Total estimado: <strong>${formatMoney(total, moeda)}</strong><br>
             Lucro bruto estimado da compra: <strong class="${signedClass(lucroBrutoCompra)}">${formatMoney(lucroBrutoCompra, moeda)}</strong><br>
-            Saldo após compra: <strong>${formatMoney(saldoAposCompra, "BRL")}</strong>
+            Saldo após compra: <strong>${formatMoney(saldoAposCompra, moeda)}</strong>
         `;
         return;
     }
@@ -382,6 +416,13 @@ function renderAcoes(items) {
             <td>${formatMoney(item.cotacaoAtual, item.moeda || "BRL")}</td>
             <td>${formatDate(item.dataHoraCotacao)}</td>
             <td>${item.id && item.id !== "-" ? `
+                ${item.temHistorico ? `
+                    <button class="table-action history-action" type="button"
+                            data-history-acao="${item.id}" data-history-ticker="${item.ticker}"
+                            data-history-moeda="${item.moeda || "BRL"}">
+                        Histórico
+                    </button>
+                ` : ""}
                 <button class="table-action danger-action" type="button" data-delete-acao="${item.id}">
                     Excluir
                 </button>
@@ -482,13 +523,13 @@ function renderCalculadoraCarteira() {
         const novoCustoMedio = novaQuantidade > 0
             ? (custoTotalAtual + total) / novaQuantidade
             : precoUnitario;
-        const saldoProjetado = state.saldo - total;
+        const saldoProjetado = getSaldoPorMoeda(moeda) - total;
         const resultadoVsCotacao = (cotacaoAtual - precoUnitario) * quantidade;
 
         result.innerHTML = `
             <strong>${acao.ticker} - compra simulada</strong><br>
             Total da compra: <strong>${formatMoney(total, moeda)}</strong><br>
-            Saldo projetado: <strong class="${signedClass(saldoProjetado)}">${formatMoney(saldoProjetado, "BRL")}</strong><br>
+            Saldo projetado: <strong class="${signedClass(saldoProjetado)}">${formatMoney(saldoProjetado, moeda)}</strong><br>
             Quantidade após compra: <strong>${novaQuantidade}</strong><br>
             Novo custo médio: <strong>${formatMoney(novoCustoMedio, moeda)}</strong><br>
             Diferença contra cotação atual: <strong class="${signedClass(resultadoVsCotacao)}">${formatMoney(resultadoVsCotacao, moeda)}</strong>
@@ -497,7 +538,7 @@ function renderCalculadoraCarteira() {
     }
 
     const quantidadeRestante = quantidadeAtual - quantidade;
-    const saldoProjetado = state.saldo + total;
+    const saldoProjetado = getSaldoPorMoeda(moeda) + total;
     const resultadoVenda = (precoUnitario - custoMedioAtual) * quantidade;
     const avisoQuantidade = quantidade > quantidadeAtual
         ? `<br><strong class="number-negative">Quantidade acima da posição atual.</strong>`
@@ -506,7 +547,7 @@ function renderCalculadoraCarteira() {
     result.innerHTML = `
         <strong>${acao.ticker} - venda simulada</strong><br>
         Total da venda: <strong>${formatMoney(total, moeda)}</strong><br>
-        Saldo projetado: <strong>${formatMoney(saldoProjetado, "BRL")}</strong><br>
+        Saldo projetado: <strong>${formatMoney(saldoProjetado, moeda)}</strong><br>
         Quantidade restante: <strong class="${signedClass(quantidadeRestante)}">${quantidadeRestante}</strong><br>
         Custo médio atual: <strong>${quantidadeAtual ? formatMoney(custoMedioAtual, moeda) : "-"}</strong><br>
         Resultado estimado da venda: <strong class="${signedClass(resultadoVenda)}">${formatMoney(resultadoVenda, moeda)}</strong>
@@ -516,7 +557,10 @@ function renderCalculadoraCarteira() {
 
 function renderUsuarios() {
     if (!state.usuarios.length) {
+        state.usuarioId = "";
+        localStorage.removeItem("usuarioCarteiraId");
         elements.usuarioSelect.innerHTML = `<option value="">Crie um usuário</option>`;
+        elements.excluirUsuario.disabled = true;
         $("#usuarioCarteira").textContent = "-";
         return;
     }
@@ -531,6 +575,7 @@ function renderUsuarios() {
             ${usuario.nome || "Usuário"} (#${usuario.id})
         </option>
     `).join("");
+    elements.excluirUsuario.disabled = false;
 
     const usuario = getSelectedUsuario();
     $("#usuarioCarteira").textContent = usuario ? `${usuario.nome || "Usuário"} #${usuario.id}` : "-";
@@ -546,16 +591,27 @@ function renderCarteira() {
         operacao.tipo === "COMPRA" &&
         (!usuarioId || String(operacao.usuario?.id) === String(usuarioId))
     );
-    const totalCompras = comprasUsuario.reduce((sum, operacao) => sum + Number(operacao.valorTotal || 0), 0);
-    const totalAtual = state.posicoes.reduce((sum, row) => sum + Number(row.valorAtual || 0), 0);
-    const resultado = state.posicoes.reduce((sum, row) => sum + Number(row.lucroPrejuizo || 0), 0);
+    const totalCompras = { BRL: 0, USD: 0 };
+    const totalAtual = { BRL: 0, USD: 0 };
+    const resultado = { BRL: 0, USD: 0 };
 
-    $("#saldoCarteira").textContent = formatMoney(state.saldo, "BRL");
-    $("#totalComprasUsuario").textContent = formatMoney(totalCompras, "BRL");
+    comprasUsuario.forEach((operacao) => {
+        const moeda = operacao.acao?.moeda === "USD" ? "USD" : "BRL";
+        totalCompras[moeda] += Number(operacao.valorTotal || 0);
+    });
+
+    state.posicoes.forEach((row) => {
+        const moeda = getAcaoByTicker(row.ticker)?.moeda === "USD" ? "USD" : "BRL";
+        totalAtual[moeda] += Number(row.valorAtual || 0);
+        resultado[moeda] += Number(row.lucroPrejuizo || 0);
+    });
+
+    $("#saldoCarteira").innerHTML = formatCurrencyValues(state.saldos);
+    $("#totalComprasUsuario").innerHTML = formatCurrencyValues(totalCompras);
     $("#totalAcoesCarteira").textContent = String(state.posicoes.length);
-    $("#valorAtualCarteira").textContent = formatMoney(totalAtual, "BRL");
-    $("#resultadoCarteira").textContent = formatMoney(resultado, "BRL");
-    $("#resultadoCarteira").className = signedClass(resultado);
+    $("#valorAtualCarteira").innerHTML = formatCurrencyValues(totalAtual);
+    $("#resultadoCarteira").innerHTML = formatCurrencyValues(resultado, true);
+    $("#resultadoCarteira").className = "currency-values";
     renderOperacaoResumo();
 
     if (!filteredRows.length) {
@@ -570,7 +626,15 @@ function renderCarteira() {
 
             return `
                 <tr>
-                    <td><strong>${row.ticker}</strong><br><span>${row.nomeEmpresa || "-"}</span></td>
+                    <td>
+                        <button class="ticker-filter-action" type="button"
+                                data-filter-carteira-ticker="${row.ticker}">
+                            ${row.ticker}
+                        </button>
+                        ${row.nomeEmpresa && row.nomeEmpresa !== row.ticker
+                            ? `<br><span>${row.nomeEmpresa}</span>`
+                            : ""}
+                    </td>
                     <td>${row.quantidade}</td>
                     <td>${formatMoney(row.precoMedio, moeda)}</td>
                     <td>${formatMoney(row.cotacaoAtual, moeda)}</td>
@@ -617,7 +681,20 @@ function renderCompras() {
             const cotacaoAtual = Number(acao?.cotacaoAtual || operacao.acao?.cotacaoAtual || 0);
             const lucroBruto = (cotacaoAtual - Number(operacao.precoUnitario || 0)) * Number(operacao.quantidade || 0);
             const posicao = getPosicaoByTicker(operacao.acao?.ticker);
-            const podeVender = Number(posicao?.quantidade || 0) > 0;
+            const quantidadeVendida = state.operacoes
+                .filter((item) =>
+                    item.tipo === "VENDA"
+                    && String(item.compraOrigemId || "") === String(operacao.id)
+                )
+                .reduce((total, item) => total + Number(item.quantidade || 0), 0);
+            const quantidadeRestante = Math.max(
+                Number(operacao.quantidade || 0) - quantidadeVendida,
+                0
+            );
+            const vendida = quantidadeRestante === 0;
+            const podeVender = !vendida && Number(posicao?.quantidade || 0) > 0;
+            const buttonClass = vendida ? "sold-action" : "sell-action";
+            const buttonLabel = vendida ? "Vendido" : "Vender";
 
             return `
                 <tr>
@@ -630,8 +707,9 @@ function renderCompras() {
                     <td class="${signedClass(lucroBruto)}">${formatMoney(lucroBruto, moeda)}</td>
                     <td>${formatMoney(operacao.valorTotal, moeda)}</td>
                     <td>
-                        <button class="table-action sell-action" type="button" data-sell-compra="${operacao.id}" ${podeVender ? "" : "disabled"}>
-                            Vender
+                        <button class="table-action ${buttonClass}" type="button"
+                                data-sell-compra="${operacao.id}" ${podeVender ? "" : "disabled"}>
+                            ${buttonLabel}
                         </button>
                     </td>
                 </tr>
@@ -653,9 +731,22 @@ function prepararVendaDaCompra(compraId) {
         return showToast(`Você não possui ${compra.acao?.ticker} disponível para venda.`, "error");
     }
 
-    const quantidadeVenda = Math.min(Number(compra.quantidade || 0), quantidadeDisponivel);
+    const quantidadeVendida = state.operacoes
+        .filter((operacao) =>
+            operacao.tipo === "VENDA"
+            && String(operacao.compraOrigemId || "") === String(compra.id)
+        )
+        .reduce((total, operacao) => total + Number(operacao.quantidade || 0), 0);
+    const quantidadeRestante = Number(compra.quantidade || 0) - quantidadeVendida;
+
+    if (quantidadeRestante <= 0) {
+        return showToast("Esta compra já foi vendida.", "error");
+    }
+
+    const quantidadeVenda = Math.min(quantidadeRestante, quantidadeDisponivel);
 
     elements.operacaoForm.elements.acaoId.value = String(acao.id);
+    elements.operacaoForm.elements.compraOrigemId.value = String(compra.id);
     elements.operacaoForm.elements.quantidade.value = String(quantidadeVenda);
     elements.operacaoForm.elements.precoUnitario.value = Number(acao.cotacaoAtual || compra.precoUnitario || 0).toFixed(2);
 
@@ -862,6 +953,41 @@ function limparCalculadoraDuasAcoes() {
     renderCalculadoraDuasAcoes();
 }
 
+function calcularOperacaoDuasAcoes(operacao, totalA, totalB) {
+    switch (operacao) {
+        case "SUBTRACAO":
+            return { label: "Subtração", simbolo: "-", valor: totalA - totalB };
+        case "MULTIPLICACAO":
+            return { label: "Multiplicação", simbolo: "×", valor: totalA * totalB };
+        case "DIVISAO":
+            return {
+                label: "Divisão",
+                simbolo: "÷",
+                valor: totalB === 0 ? null : totalA / totalB
+            };
+        default:
+            return { label: "Soma", simbolo: "+", valor: totalA + totalB };
+    }
+}
+
+function formatResultadoOperacaoDuasAcoes(resultado, moedasIguais, moeda) {
+    if (resultado.valor === null) {
+        return `<strong class="number-negative">Não é possível dividir por zero.</strong>`;
+    }
+
+    const usaFormatoMonetario =
+        moedasIguais
+        && (resultado.label === "Soma" || resultado.label === "Subtração");
+    const valorFormatado = usaFormatoMonetario
+        ? formatMoney(resultado.valor, moeda)
+        : resultado.valor.toLocaleString("pt-BR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 4
+        });
+
+    return `<strong class="${signedClass(resultado.valor)}">${valorFormatado}</strong>`;
+}
+
 function renderCalculadoraDuasAcoes() {
     const result = elements.calculadoraDuasAcoesResultado;
     if (!result) return;
@@ -898,6 +1024,7 @@ function renderCalculadoraDuasAcoes() {
 
     const totalA = precoA * quantidadeA;
     const totalB = precoB * quantidadeB;
+    const operacaoSelecionada = elements.calcDuasAcoesOperacao?.value || "SOMA";
     const totalGeral = totalA + totalB;
     const diferencaUnitario = precoA - precoB;
     const diferencaTotal = totalA - totalB;
@@ -906,9 +1033,19 @@ function renderCalculadoraDuasAcoes() {
         : (precoA + precoB) / 2;
     const relacao = precoB > 0 ? precoA / precoB : 0;
     const moedasIguais = primeira.acao.moeda === segunda.acao.moeda;
+    const resultadoOperacao = calcularOperacaoDuasAcoes(
+        operacaoSelecionada,
+        totalA,
+        totalB
+    );
+    const resultadoOperacaoFormatado = formatResultadoOperacaoDuasAcoes(
+        resultadoOperacao,
+        moedasIguais,
+        primeira.acao.moeda
+    );
     const avisoMoeda = moedasIguais
         ? ""
-        : `<br><strong>Moedas diferentes (${primeira.acao.moeda} e ${segunda.acao.moeda}): totais sem conversão cambial.</strong>`;
+        : `<br><strong>Moedas diferentes (${primeira.acao.moeda} e ${segunda.acao.moeda}): operação numérica sem conversão cambial.</strong>`;
 
     result.innerHTML = `
         <strong>${primeira.acao.ticker}</strong>: ${formatMoney(precoA, primeira.acao.moeda)}
@@ -917,6 +1054,12 @@ function renderCalculadoraDuasAcoes() {
         <strong>${segunda.acao.ticker}</strong>: ${formatMoney(precoB, segunda.acao.moeda)}
         (${precoBInformado ? "preço informado" : segunda.fonte}) x ${quantidadeB || 0}
         = <strong>${formatMoney(totalB, segunda.acao.moeda)}</strong><br>
+        <span class="calculation-operation-result">
+            ${resultadoOperacao.label}: ${totalA.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}
+            ${resultadoOperacao.simbolo}
+            ${totalB.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}
+            = ${resultadoOperacaoFormatado}
+        </span><br>
         Diferença unitária: <strong class="${signedClass(diferencaUnitario)}">${formatAverageValue(diferencaUnitario, primeira.acao.moeda, segunda.acao.moeda)}</strong><br>
         Diferença total: <strong class="${signedClass(diferencaTotal)}">${formatAverageValue(diferencaTotal, primeira.acao.moeda, segunda.acao.moeda)}</strong><br>
         Relação de preço: <strong>${relacao.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x</strong><br>
@@ -1099,7 +1242,7 @@ async function loadCarteira() {
     if (!usuarioId) {
         state.posicoes = [];
         state.operacoes = [];
-        state.saldo = 0;
+        state.saldos = { BRL: 0, USD: 0 };
         renderCarteira();
         return;
     }
@@ -1128,9 +1271,12 @@ async function loadCarteira() {
     }
 
     if (saldoResult.status === "fulfilled") {
-        state.saldo = Number(saldoResult.value || 0);
+        state.saldos = {
+            BRL: Number(saldoResult.value?.brl || 0),
+            USD: Number(saldoResult.value?.usd || 0)
+        };
     } else {
-        state.saldo = 0;
+        state.saldos = { BRL: 0, USD: 0 };
         showToast(saldoResult.reason.message, "error");
     }
 
@@ -1292,6 +1438,47 @@ async function submitUsuario(event) {
     }
 }
 
+async function excluirUsuarioSelecionado() {
+    const usuarioId = selectedUsuarioId();
+    const usuario = getSelectedUsuario();
+
+    if (!usuarioId || !usuario) {
+        return showToast("Selecione um usuário para excluir.", "error");
+    }
+
+    const confirmado = window.confirm(
+        `Excluir ${usuario.nome || "usuário"} (#${usuario.id})? `
+        + "A carteira, os depósitos e todas as operações deste usuário também serão removidos."
+    );
+
+    if (!confirmado) return;
+
+    try {
+        await requestJson(`/usuarios/${encodeURIComponent(usuarioId)}`, {
+            method: "DELETE"
+        });
+
+        state.usuarios = state.usuarios.filter(
+            (item) => String(item.id) !== String(usuarioId)
+        );
+        state.usuarioId = state.usuarios.length ? String(state.usuarios[0].id) : "";
+
+        if (state.usuarioId) {
+            localStorage.setItem("usuarioCarteiraId", state.usuarioId);
+        } else {
+            localStorage.removeItem("usuarioCarteiraId");
+        }
+
+        renderUsuarios();
+        showToast("Usuário e dados da carteira excluídos.");
+        await loadUsuarios();
+        await loadCarteira();
+    } catch (error) {
+        setStatus("Exclusão de usuário falhou", "error");
+        showToast(error.message, "error");
+    }
+}
+
 async function submitDeposito(event) {
     event.preventDefault();
     const usuarioId = selectedUsuarioId();
@@ -1311,7 +1498,7 @@ async function submitDeposito(event) {
             body: JSON.stringify(payload)
         });
         form.reset();
-        showToast("Depósito registrado.");
+        showToast(`Depósito em ${payload.moeda} registrado.`);
         await loadCarteira();
     } catch (error) {
         setStatus("Depósito falhou", "error");
@@ -1330,6 +1517,9 @@ async function submitOperacao(event) {
     payload.acaoId = Number(payload.acaoId);
     payload.quantidade = Number(payload.quantidade);
     payload.precoUnitario = parseNumber(payload.precoUnitario);
+    payload.compraOrigemId = payload.compraOrigemId
+        ? Number(payload.compraOrigemId)
+        : null;
 
     if (!payload.acaoId) return showToast("Cadastre e selecione uma ação.", "error");
     if (!Number.isInteger(payload.quantidade) || payload.quantidade <= 0) {
@@ -1340,10 +1530,14 @@ async function submitOperacao(event) {
     }
 
     const totalOperacao = payload.quantidade * payload.precoUnitario;
-    if (payload.tipo === "COMPRA" && totalOperacao > state.saldo) {
+    const acaoSelecionada = getAcaoById(payload.acaoId);
+    const moedaOperacao = acaoSelecionada?.moeda || "BRL";
+    const saldoOperacao = getSaldoPorMoeda(moedaOperacao);
+
+    if (payload.tipo === "COMPRA" && totalOperacao > saldoOperacao) {
         renderOperacaoResumo();
         return showToast(
-            `Saldo insuficiente. Total da compra: ${formatMoney(totalOperacao, "BRL")}. Saldo atual: ${formatMoney(state.saldo, "BRL")}.`,
+            `Saldo insuficiente em ${moedaOperacao}. Total da compra: ${formatMoney(totalOperacao, moedaOperacao)}. Saldo atual: ${formatMoney(saldoOperacao, moedaOperacao)}.`,
             "error"
         );
     }
@@ -1357,6 +1551,27 @@ async function submitOperacao(event) {
             renderOperacaoResumo();
             return showToast(
                 `Quantidade insuficiente. Disponível para venda: ${quantidadeDisponivel}.`,
+                "error"
+            );
+        }
+
+        const compraOrigem = state.operacoes.find(
+            (operacao) => String(operacao.id) === String(payload.compraOrigemId)
+        );
+        const quantidadeJaVendida = state.operacoes
+            .filter((operacao) =>
+                operacao.tipo === "VENDA"
+                && String(operacao.compraOrigemId || "") === String(payload.compraOrigemId)
+            )
+            .reduce((total, operacao) => total + Number(operacao.quantidade || 0), 0);
+        const quantidadeRestante = Number(compraOrigem?.quantidade || 0) - quantidadeJaVendida;
+
+        if (!compraOrigem || payload.quantidade > quantidadeRestante) {
+            renderOperacaoResumo();
+            return showToast(
+                quantidadeRestante > 0
+                    ? `Quantidade disponível nesta compra: ${quantidadeRestante}.`
+                    : "Esta compra já foi vendida.",
                 "error"
             );
         }
@@ -1442,6 +1657,25 @@ async function atualizarCotacao() {
     }
 }
 
+async function abrirHistoricoCotacao(id, ticker, moeda) {
+    try {
+        const historico = await requestJson(`/acoes/${encodeURIComponent(id)}/historico`);
+        elements.historicoCotacaoTitle.textContent = `Histórico de ${ticker}`;
+        elements.historicoCotacaoBody.innerHTML = historico.length
+            ? historico.map((registro) => `
+                <tr>
+                    <td>${formatDate(registro.dataHoraCotacao)}</td>
+                    <td><strong>${formatMoney(registro.cotacao, moeda)}</strong></td>
+                </tr>
+            `).join("")
+            : `<tr><td class="empty-state" colspan="2">Nenhum histórico encontrado.</td></tr>`;
+        elements.historicoCotacaoDialog.showModal();
+    } catch (error) {
+        setStatus("Consulta do histórico falhou", "error");
+        showToast(error.message, "error");
+    }
+}
+
 function setupTabs() {
     document.querySelectorAll(".tab-button").forEach((button) => {
         button.addEventListener("click", () => {
@@ -1465,17 +1699,40 @@ function bindEvents() {
         excluirCorretora(button.dataset.deleteCorretora);
     });
     elements.acoesBody.addEventListener("click", (event) => {
-        const button = event.target.closest("[data-delete-acao]");
-        if (!button) return;
-        excluirAcao(button.dataset.deleteAcao);
+        const historyButton = event.target.closest("[data-history-acao]");
+        if (historyButton) {
+            abrirHistoricoCotacao(
+                historyButton.dataset.historyAcao,
+                historyButton.dataset.historyTicker,
+                historyButton.dataset.historyMoeda
+            );
+            return;
+        }
+
+        const deleteButton = event.target.closest("[data-delete-acao]");
+        if (!deleteButton) return;
+        excluirAcao(deleteButton.dataset.deleteAcao);
     });
+    $("#fecharHistoricoCotacao").addEventListener(
+        "click",
+        () => elements.historicoCotacaoDialog.close()
+    );
     elements.usuarioForm.addEventListener("submit", submitUsuario);
+    elements.excluirUsuario.addEventListener("click", excluirUsuarioSelecionado);
     elements.depositoForm.addEventListener("submit", submitDeposito);
     elements.operacaoForm.addEventListener("submit", submitOperacao);
     elements.comprasBody.addEventListener("click", (event) => {
         const button = event.target.closest("[data-sell-compra]");
         if (!button) return;
         prepararVendaDaCompra(button.dataset.sellCompra);
+    });
+    elements.carteiraBody.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-filter-carteira-ticker]");
+        if (!button) return;
+
+        state.filtroCarteira = button.dataset.filterCarteiraTicker.toUpperCase();
+        $("#filtroCarteiraTicker").value = state.filtroCarteira;
+        renderCarteira();
     });
     elements.novaCompraOperacao.addEventListener("click", () => {
         setTipoOperacao("COMPRA");
@@ -1504,6 +1761,7 @@ function bindEvents() {
     elements.calcDuasAcoesQuantidadeB.addEventListener("input", renderCalculadoraDuasAcoes);
     elements.calcDuasAcoesPrecoA.addEventListener("input", renderCalculadoraDuasAcoes);
     elements.calcDuasAcoesPrecoB.addEventListener("input", renderCalculadoraDuasAcoes);
+    elements.calcDuasAcoesOperacao.addEventListener("change", renderCalculadoraDuasAcoes);
     elements.usarValoresAtuaisDuasAcoes.addEventListener("click", usarValoresAtuaisNaCalculadoraDuasAcoes);
     elements.limparCalculadoraDuasAcoes.addEventListener("click", limparCalculadoraDuasAcoes);
     $("#refreshCorretoras").addEventListener("click", loadCorretoras);

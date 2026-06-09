@@ -32,6 +32,9 @@ public class Operacao {
 
     private LocalDateTime dataOperacao;
 
+    @Column(name = "compra_origem_id")
+    private Long compraOrigemId;
+
     public Long getId() {
         return id;
     }
@@ -94,6 +97,14 @@ public class Operacao {
 
     public void setUsuario(Usuario usuario) {
         this.usuario = usuario;
+    }
+
+    public Long getCompraOrigemId() {
+        return compraOrigemId;
+    }
+
+    public void setCompraOrigemId(Long compraOrigemId) {
+        this.compraOrigemId = compraOrigemId;
     }
 
     @PrePersist

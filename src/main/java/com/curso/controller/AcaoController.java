@@ -4,6 +4,7 @@ import com.curso.domains.Acao;
 import com.curso.dto.AcaoInputDto;
 import com.curso.dto.AcaoOutputDto;
 import com.curso.dto.BrapiListResponseDto;
+import com.curso.dto.HistoricoCotacaoOutputDto;
 import com.curso.mapper.AcaoMapper;
 import com.curso.service.AcaoService;
 import jakarta.validation.Valid;
@@ -74,6 +75,11 @@ public class AcaoController {
     @PutMapping("/{id}/atualizar-cotacao")
     public AcaoOutputDto atualizar(@PathVariable Long id) {
         return mapper.toDTO(service.atualizarCotacao(id));
+    }
+
+    @GetMapping("/{id}/historico")
+    public List<HistoricoCotacaoOutputDto> listarHistorico(@PathVariable Long id) {
+        return service.listarHistorico(id);
     }
 
     @DeleteMapping("/{id}")

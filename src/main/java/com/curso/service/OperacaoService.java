@@ -6,6 +6,7 @@ import com.curso.domains.Operacao;
 import com.curso.domains.Usuario;
 import com.curso.dto.OperacaoInputDto;
 import com.curso.dto.PosicaoDto;
+import com.curso.enums.Moeda;
 import com.curso.enums.TipoLancamento;
 import com.curso.enums.TipoOperacao;
 import com.curso.repository.AcaoRepository;
@@ -31,7 +32,7 @@ public class OperacaoService {
     private final AcaoRepository acaoRepository;
     private final UsuarioRepository usuarioRepository;
     private final LancamentoFinanceiroRepository financeiroRepository;
-    private BigDecimal calcularSaldo(Long usuarioId) {
+    private BigDecimal calcularSaldo(Long usuarioId, Moeda moeda) {
 
         List<LancamentoFinanceiro> lancamentos =
                 financeiroRepository.findByUsuarioId(usuarioId);
@@ -39,6 +40,10 @@ public class OperacaoService {
         BigDecimal saldo = BigDecimal.ZERO;
 
         for (LancamentoFinanceiro l : lancamentos) {
+            Moeda moedaLancamento = l.getMoeda() == null ? Moeda.BRL : l.getMoeda();
+            if (moedaLancamento != moeda) {
+                continue;
+            }
 
             switch (l.getTipo()) {
 
@@ -86,11 +91,11 @@ public class OperacaoService {
         if (dto.getTipo() == TipoOperacao.COMPRA) {
 
             BigDecimal saldo =
-                    calcularSaldo(usuario.getId());
+                    calcularSaldo(usuario.getId(), acao.getMoeda());
 
             if (saldo.compareTo(valorOperacao) < 0) {
                 throw new RuntimeException(
-                        "Saldo insuficiente"
+                        "Saldo insuficiente em " + acao.getMoeda()
                 );
             }
 
@@ -100,6 +105,7 @@ public class OperacaoService {
             lancamento.setUsuario(usuario);
             lancamento.setTipo(TipoLancamento.COMPRA_ACAO);
             lancamento.setValor(valorOperacao);
+            lancamento.setMoeda(acao.getMoeda());
             lancamento.setDescricao(
                     "Compra de " + acao.getTicker()
             );
@@ -120,19 +126,22 @@ public class OperacaoService {
                 );
             }
 
+            Operacao compraOrigem = validarCompraOrigem(dto, usuario, acao);
+
             LancamentoFinanceiro lancamento =
                     new LancamentoFinanceiro();
 
             lancamento.setUsuario(usuario);
             lancamento.setTipo(TipoLancamento.VENDA_ACAO);
             lancamento.setValor(valorOperacao);
+            lancamento.setMoeda(acao.getMoeda());
             lancamento.setDescricao(
                     "Venda de " + acao.getTicker()
             );
 
             financeiroRepository.save(lancamento);
 
-            
+            dto.setCompraOrigemId(compraOrigem.getId());
         }
 
         Operacao op = new Operacao();
@@ -142,8 +151,59 @@ public class OperacaoService {
         op.setTipo(dto.getTipo());
         op.setQuantidade(dto.getQuantidade());
         op.setPrecoUnitario(dto.getPrecoUnitario());
+        op.setCompraOrigemId(dto.getCompraOrigemId());
 
         return repository.save(op);
+    }
+
+    private Operacao validarCompraOrigem(
+            OperacaoInputDto dto,
+            Usuario usuario,
+            Acao acao) {
+
+        if (dto.getCompraOrigemId() == null) {
+            throw new RuntimeException(
+                    "Selecione uma compra disponível para realizar a venda"
+            );
+        }
+
+        Operacao compra = repository.findById(dto.getCompraOrigemId())
+                .orElseThrow(() -> new RuntimeException(
+                        "Compra de origem não encontrada"
+                ));
+
+        boolean compraValida =
+                compra.getTipo() == TipoOperacao.COMPRA
+                        && compra.getUsuario() != null
+                        && compra.getAcao() != null
+                        && compra.getUsuario().getId().equals(usuario.getId())
+                        && compra.getAcao().getId().equals(acao.getId());
+
+        if (!compraValida) {
+            throw new RuntimeException(
+                    "A compra selecionada não pertence a esta carteira ou ação"
+            );
+        }
+
+        int quantidadeVendida = repository
+                .findByCompraOrigemId(compra.getId())
+                .stream()
+                .filter(operacao -> operacao.getTipo() == TipoOperacao.VENDA)
+                .mapToInt(Operacao::getQuantidade)
+                .sum();
+        int quantidadeRestante = compra.getQuantidade() - quantidadeVendida;
+
+        if (quantidadeRestante <= 0) {
+            throw new RuntimeException("Esta compra já foi vendida");
+        }
+
+        if (dto.getQuantidade() > quantidadeRestante) {
+            throw new RuntimeException(
+                    "Quantidade disponível nesta compra: " + quantidadeRestante
+            );
+        }
+
+        return compra;
     }
 
     private int calcularQuantidadeAtual(Long usuarioId, Long acaoId) {

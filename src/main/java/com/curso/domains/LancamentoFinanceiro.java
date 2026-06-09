@@ -1,6 +1,7 @@
 package com.curso.domains;
 
 import com.curso.enums.TipoLancamento;
+import com.curso.enums.Moeda;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -22,6 +23,9 @@ public class LancamentoFinanceiro {
 
     @Column(nullable = false)
     private BigDecimal valor;
+
+    @Enumerated(EnumType.STRING)
+    private Moeda moeda;
 
     private String descricao;
 
@@ -62,6 +66,14 @@ public class LancamentoFinanceiro {
 
     public void setValor(BigDecimal valor) {
         this.valor = valor;
+    }
+
+    public Moeda getMoeda() {
+        return moeda;
+    }
+
+    public void setMoeda(Moeda moeda) {
+        this.moeda = moeda;
     }
 
     public String getDescricao() {

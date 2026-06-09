@@ -1,11 +1,10 @@
 package com.curso.controller;
 
 import com.curso.dto.DepositoDto;
+import com.curso.dto.SaldoOutputDto;
 import com.curso.service.FinanceiroService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
-
-import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/financeiro")
@@ -28,9 +27,9 @@ public class FinanceiroController {
     }
 
     @GetMapping("/saldo/{usuarioId}")
-    public BigDecimal saldo(
+    public SaldoOutputDto saldo(
             @PathVariable Long usuarioId) {
 
-        return service.calcularSaldo(usuarioId);
+        return service.calcularSaldos(usuarioId);
     }
 }

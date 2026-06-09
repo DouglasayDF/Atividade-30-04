@@ -8,5 +8,7 @@ import java.util.List;
 public interface LancamentoFinanceiroRepository
         extends JpaRepository<LancamentoFinanceiro, Long> {
 
+    void deleteByUsuarioId(Long usuarioId);
+
     List<LancamentoFinanceiro> findByUsuarioId(Long usuarioId);
 }

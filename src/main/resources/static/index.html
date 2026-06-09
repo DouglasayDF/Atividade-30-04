@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Gestão de Ações</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/styles.css?v=operacoes-calculadora-13">
 </head>
 <body>
 <header class="app-header">
@@ -184,12 +184,15 @@
                 <strong id="usuarioCarteira">-</strong>
             </div>
             <div class="summary-item">
-                <span>Saldo</span>
-                <strong id="saldoCarteira">R$ 0,00</strong>
+                <span>Saldos disponíveis</span>
+                <strong id="saldoCarteira" class="currency-values">
+                    <span>R$ 0,00</span>
+                    <span>$ 0.00</span>
+                </strong>
             </div>
             <div class="summary-item">
                 <span>Compras do usuário</span>
-                <strong id="totalComprasUsuario">R$ 0,00</strong>
+                <strong id="totalComprasUsuario" class="currency-values">R$ 0,00</strong>
             </div>
             <div class="summary-item">
                 <span>Ações na carteira</span>
@@ -197,40 +200,66 @@
             </div>
             <div class="summary-item">
                 <span>Valor atual</span>
-                <strong id="valorAtualCarteira">R$ 0,00</strong>
+                <strong id="valorAtualCarteira" class="currency-values">R$ 0,00</strong>
             </div>
             <div class="summary-item">
                 <span>Lucro / prejuízo</span>
-                <strong id="resultadoCarteira">R$ 0,00</strong>
+                <strong id="resultadoCarteira" class="currency-values">R$ 0,00</strong>
             </div>
         </div>
 
-        <div class="split-layout">
-            <div class="form-surface">
-                <h3>Usuário e saldo</h3>
-                <label>
-                    Selecionar usuário
-                    <select id="usuarioSelect"></select>
-                </label>
-                <form id="usuarioForm" class="inline-form">
+        <div class="portfolio-primary-grid">
+            <section class="form-surface account-panel">
+                <div class="card-heading">
+                    <div>
+                        <h3>Gerenciar usuário</h3>
+                        <p>Selecione uma carteira, crie usuários ou registre saldo.</p>
+                    </div>
+                </div>
+
+                <div class="user-selection-row">
                     <label>
-                        Novo usuário
+                        Usuário selecionado
+                        <select id="usuarioSelect"></select>
+                    </label>
+                    <button id="excluirUsuario" class="danger-action" type="button">
+                        Excluir usuário
+                    </button>
+                </div>
+
+                <form id="usuarioForm" class="account-action">
+                    <label>
+                        Criar novo usuário
                         <input name="nome" placeholder="Ex.: Maria" required>
                     </label>
                     <button type="submit">Criar usuário</button>
                 </form>
-                <form id="depositoForm" class="inline-form">
+
+                <form id="depositoForm" class="account-action deposit-action">
                     <label>
-                        Depósito
+                        Adicionar saldo
                         <input name="valor" inputmode="decimal" min="0.01" step="0.01" type="number" placeholder="1000.00" required>
+                    </label>
+                    <label>
+                        Moeda
+                        <select name="moeda" required>
+                            <option value="BRL">Real (BRL)</option>
+                            <option value="USD">Dólar (USD)</option>
+                        </select>
                     </label>
                     <button type="submit">Depositar</button>
                 </form>
-            </div>
+            </section>
 
-            <form id="operacaoForm" class="form-surface">
-                <h3>Comprar ação</h3>
+            <form id="operacaoForm" class="form-surface trade-panel">
+                <div class="card-heading">
+                    <div>
+                        <h3>Registrar operação</h3>
+                        <p>Compre uma ação ou prepare uma venda pela tabela de compras.</p>
+                    </div>
+                </div>
                 <input id="tipoOperacao" name="tipo" type="hidden" value="COMPRA">
+                <input name="compraOrigemId" type="hidden">
                 <div class="operation-mode-row">
                     <label>
                         Operação
@@ -245,175 +274,240 @@
 
                 <label>
                     Quantidade
-                    <input name="quantidade" inputmode="numeric" min="1" step="1" type="number" placeholder="100" required>
+                    <input name="quantidade" inputmode="numeric" min="1" step="1" type="number" required>
                 </label>
                 <label>
-                    Preço unitário
+                    <span id="precoOperacaoLabel">Comprar ação por:</span>
                     <input name="precoUnitario" inputmode="decimal" min="0.01" step="0.01" type="number" placeholder="32.50" required>
                 </label>
                 <div id="operacaoResumo" class="operation-summary">
                     Total estimado: R$ 0,00
                 </div>
-                <button class="primary-action" type="submit">Adicionar operação</button>
+                <button class="primary-action" type="submit">Executar operação</button>
             </form>
         </div>
 
-        <div class="filter-row">
-            <label>
-                Filtrar ação
-                <input id="filtroCarteiraTicker" placeholder="PETR4">
-            </label>
-            <button id="filtrarCarteira" type="button">Filtrar</button>
-            <button id="mostrarCarteiraToda" type="button" class="secondary-action">Mostrar tudo</button>
-        </div>
+        <section class="portfolio-section">
+            <div class="portfolio-section-heading">
+                <div>
+                    <h3>Posição da carteira</h3>
+                    <p>Consulte quantidades, custo médio, valor atual e rentabilidade.</p>
+                </div>
+                <div class="filter-row">
+                    <label>
+                        Filtrar ação
+                        <input id="filtroCarteiraTicker" placeholder="PETR4">
+                    </label>
+                    <button id="filtrarCarteira" type="button">Filtrar</button>
+                    <button id="mostrarCarteiraToda" type="button" class="secondary-action">Mostrar tudo</button>
+                </div>
+            </div>
 
-        <div id="custoMedioResultado" class="calculator-result">
-            Selecione um usuário e registre operações para ver o custo médio.
-        </div>
+            <div id="custoMedioResultado" class="calculator-result position-highlight">
+                Selecione um usuário e registre operações para ver o custo médio.
+            </div>
 
-        <div class="calculator-panel">
-            <h3>Calculadora</h3>
-            <div class="calculator-controls">
-                <label>
-                    Ação
-                    <select id="calculadoraAcao"></select>
-                </label>
-                <label>
-                    Operação
-                    <select id="calculadoraTipo">
-                        <option value="COMPRA">Compra</option>
-                        <option value="VENDA">Venda</option>
-                    </select>
-                </label>
-                <label>
-                    Quantidade
-                    <input id="calculadoraQuantidade" inputmode="numeric" min="1" step="1" type="number" placeholder="100">
-                </label>
-                <label>
-                    Preço unitário
-                    <input id="calculadoraPreco" inputmode="decimal" min="0.01" step="0.01" type="number" placeholder="32.50">
-                </label>
+            <div class="table-shell portfolio-table">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Ação</th>
+                        <th>Quantidade</th>
+                        <th>Custo médio</th>
+                        <th>Cotação</th>
+                        <th>Valor investido</th>
+                        <th>Valor atual</th>
+                        <th>Lucro / prejuízo</th>
+                        <th>Rentabilidade</th>
+                    </tr>
+                    </thead>
+                    <tbody id="carteiraBody"></tbody>
+                </table>
             </div>
-            <button id="usarCotacaoCalculadora" type="button" class="secondary-action">Usar cotação atual</button>
-            <div id="calculadoraCarteiraResultado" class="calculator-result compact-result">
-                Selecione uma ação e informe os valores.
-            </div>
-        </div>
+        </section>
 
-        <div class="average-panel">
-            <h3>Média entre duas ações</h3>
-            <div class="average-controls">
-                <label>
-                    Primeira ação
-                    <select id="mediaAcaoA"></select>
-                </label>
-                <label>
-                    Segunda ação
-                    <select id="mediaAcaoB"></select>
-                </label>
+        <section class="portfolio-section">
+            <div class="portfolio-section-heading">
+                <div>
+                    <h3>Ferramentas de análise</h3>
+                    <p>Simule operações e compare valores sem alterar a carteira.</p>
+                </div>
             </div>
-            <div id="mediaDuasAcoesResultado" class="calculator-result compact-result">
-                Selecione duas ações diferentes da carteira.
-            </div>
-        </div>
-        <div class="two-stock-calculator-panel">
-            <h3>Calculadora entre duas ações</h3>
-            <div class="two-stock-calculator-grid">
-                <label>
-                    Primeira ação
-                    <select id="calcDuasAcoesA"></select>
-                </label>
-                <label>
-                    Segunda ação
-                    <select id="calcDuasAcoesB"></select>
-                </label>
-                <label>
-                    Quantidade da primeira
-                    <input id="calcDuasAcoesQuantidadeA" inputmode="numeric" min="0" step="1" type="number" placeholder="10">
-                </label>
-                <label>
-                    Quantidade da segunda
-                    <input id="calcDuasAcoesQuantidadeB" inputmode="numeric" min="0" step="1" type="number" placeholder="10">
-                </label>
-                <label>
-                    Preço da primeira
-                    <input id="calcDuasAcoesPrecoA" inputmode="decimal" min="0.01" step="0.01" type="number" placeholder="Usar valor atual">
-                </label>
-                <label>
-                    Preço da segunda
-                    <input id="calcDuasAcoesPrecoB" inputmode="decimal" min="0.01" step="0.01" type="number" placeholder="Usar valor atual">
-                </label>
-            </div>
-            <div class="button-row calculator-actions">
-                <button id="usarValoresAtuaisDuasAcoes" type="button" class="secondary-action">Usar valores atuais</button>
-                <button id="limparCalculadoraDuasAcoes" type="button" class="secondary-action">Limpar valores</button>
-            </div>
-            <div id="calculadoraDuasAcoesResultado" class="calculator-result compact-result">
-                Selecione duas ações para comparar.
-            </div>
-        </div>
-        <h3 class="table-title">Compras do usuário</h3>
-        <div class="table-shell purchases-table">
-            <table>
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Data</th>
-                    <th>Ação</th>
-                    <th>Quantidade</th>
-                    <th>Preço da compra</th>
-                    <th>Cotação atual</th>
-                    <th>Lucro bruto</th>
-                    <th>Total comprado</th>
-                    <th>Vender</th>
-                </tr>
-                </thead>
-                <tbody id="comprasBody"></tbody>
-            </table>
-        </div>
 
-        <h3 class="table-title">Ações da carteira</h3>
-        <div class="table-shell portfolio-table">
-            <table>
-                <thead>
-                <tr>
-                    <th>Ação</th>
-                    <th>Quantidade</th>
-                    <th>Custo médio</th>
-                    <th>Cotação</th>
-                    <th>Valor investido</th>
-                    <th>Valor atual</th>
-                    <th>Lucro / prejuízo</th>
-                    <th>Rentabilidade</th>
-                </tr>
-                </thead>
-                <tbody id="carteiraBody"></tbody>
-            </table>
-        </div>
+            <div class="portfolio-tools-grid">
+                <div class="calculator-panel">
+                    <h3>Calculadora de operação</h3>
+                    <div class="calculator-controls">
+                        <label>
+                            Ação
+                            <select id="calculadoraAcao"></select>
+                        </label>
+                        <label>
+                            Operação
+                            <select id="calculadoraTipo">
+                                <option value="COMPRA">Compra</option>
+                                <option value="VENDA">Venda</option>
+                            </select>
+                        </label>
+                        <label>
+                            Quantidade
+                            <input id="calculadoraQuantidade" inputmode="numeric" min="1" step="1" type="number" placeholder="100">
+                        </label>
+                        <label>
+                            Preço unitário
+                            <input id="calculadoraPreco" inputmode="decimal" min="0.01" step="0.01" type="number" placeholder="32.50">
+                        </label>
+                    </div>
+                    <button id="usarCotacaoCalculadora" type="button" class="secondary-action">Usar cotação atual</button>
+                    <div id="calculadoraCarteiraResultado" class="calculator-result compact-result">
+                        Selecione uma ação e informe os valores.
+                    </div>
+                </div>
 
-        <h3 class="table-title">Todas as operações da carteira</h3>
-        <div class="table-shell operations-table">
-            <table>
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Data</th>
-                    <th>Ação</th>
-                    <th>Usuário</th>
-                    <th>Tipo</th>
-                    <th>Quantidade</th>
-                    <th>Preço</th>
-                    <th>Total</th>
-                </tr>
-                </thead>
-                <tbody id="operacoesBody"></tbody>
-            </table>
-        </div>
+                <div class="average-panel">
+                    <h3>Média entre duas ações</h3>
+                    <div class="average-controls">
+                        <label>
+                            Primeira ação
+                            <select id="mediaAcaoA"></select>
+                        </label>
+                        <label>
+                            Segunda ação
+                            <select id="mediaAcaoB"></select>
+                        </label>
+                    </div>
+                    <div id="mediaDuasAcoesResultado" class="calculator-result compact-result">
+                        Selecione duas ações diferentes da carteira.
+                    </div>
+                </div>
+
+                <div class="two-stock-calculator-panel">
+                    <h3>Calculadora entre duas ações</h3>
+                    <div class="two-stock-calculator-grid">
+                        <label>
+                            Primeira ação
+                            <select id="calcDuasAcoesA"></select>
+                        </label>
+                        <label>
+                            Segunda ação
+                            <select id="calcDuasAcoesB"></select>
+                        </label>
+                        <label>
+                            Quantidade da primeira
+                            <input id="calcDuasAcoesQuantidadeA" inputmode="numeric" min="0" step="1" type="number" placeholder="10">
+                        </label>
+                        <label>
+                            Quantidade da segunda
+                            <input id="calcDuasAcoesQuantidadeB" inputmode="numeric" min="0" step="1" type="number" placeholder="10">
+                        </label>
+                        <label>
+                            Preço da primeira
+                            <input id="calcDuasAcoesPrecoA" inputmode="decimal" min="0.01" step="0.01" type="number" placeholder="Usar valor atual">
+                        </label>
+                        <label>
+                            Preço da segunda
+                            <input id="calcDuasAcoesPrecoB" inputmode="decimal" min="0.01" step="0.01" type="number" placeholder="Usar valor atual">
+                        </label>
+                    </div>
+                    <label class="two-stock-operation">
+                        Operação entre os totais
+                        <select id="calcDuasAcoesOperacao">
+                            <option value="SOMA">Soma (+)</option>
+                            <option value="SUBTRACAO">Subtração (-)</option>
+                            <option value="MULTIPLICACAO">Multiplicação (×)</option>
+                            <option value="DIVISAO">Divisão (÷)</option>
+                        </select>
+                    </label>
+                    <div class="button-row calculator-actions">
+                        <button id="usarValoresAtuaisDuasAcoes" type="button" class="secondary-action">Usar valores atuais</button>
+                        <button id="limparCalculadoraDuasAcoes" type="button" class="secondary-action">Limpar valores</button>
+                    </div>
+                    <div id="calculadoraDuasAcoesResultado" class="calculator-result compact-result">
+                        Selecione duas ações para comparar.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="portfolio-section">
+            <div class="portfolio-section-heading">
+                <div>
+                    <h3>Movimentações</h3>
+                    <p>Revise compras e todas as operações registradas para o usuário.</p>
+                </div>
+            </div>
+
+            <div class="movement-grid">
+                <div class="movement-column">
+                    <h4 class="table-title">Compras do usuário</h4>
+                    <div class="table-shell purchases-table">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Data</th>
+                                <th>Ação</th>
+                                <th>Quantidade</th>
+                                <th>Preço da compra</th>
+                                <th>Cotação atual</th>
+                                <th>Lucro bruto</th>
+                                <th>Total comprado</th>
+                                <th>Vender</th>
+                            </tr>
+                            </thead>
+                            <tbody id="comprasBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="movement-column">
+                    <h4 class="table-title">Todas as operações da carteira</h4>
+                    <div class="table-shell operations-table">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Data</th>
+                                <th>Ação</th>
+                                <th>Usuário</th>
+                                <th>Tipo</th>
+                                <th>Quantidade</th>
+                                <th>Preço</th>
+                                <th>Total</th>
+                            </tr>
+                            </thead>
+                            <tbody id="operacoesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
     </section>
 </main>
 
+<dialog id="historicoCotacaoDialog" class="history-dialog">
+    <div class="history-dialog-header">
+        <div>
+            <h3 id="historicoCotacaoTitle">Histórico de cotação</h3>
+            <p>Últimos cinco valores anteriores.</p>
+        </div>
+        <button id="fecharHistoricoCotacao" class="table-action" type="button">Fechar</button>
+    </div>
+    <div class="table-shell">
+        <table>
+            <thead>
+            <tr>
+                <th>Data da cotação</th>
+                <th>Valor anterior</th>
+            </tr>
+            </thead>
+            <tbody id="historicoCotacaoBody"></tbody>
+        </table>
+    </div>
+</dialog>
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<script src="/app.js"></script>
+<script src="/app.js?v=operacoes-calculadora-13"></script>
 </body>
 </html>

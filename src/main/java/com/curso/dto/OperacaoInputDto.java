@@ -24,6 +24,8 @@ public class OperacaoInputDto {
     @NotNull
     private Long usuarioId;
 
+    private Long compraOrigemId;
+
     public Long getAcaoId() {
         return acaoId;
     }
@@ -62,5 +64,13 @@ public class OperacaoInputDto {
 
     public void setUsuarioId(Long usuarioId) {
         this.usuarioId = usuarioId;
+    }
+
+    public Long getCompraOrigemId() {
+        return compraOrigemId;
+    }
+
+    public void setCompraOrigemId(Long compraOrigemId) {
+        this.compraOrigemId = compraOrigemId;
     }
 }
